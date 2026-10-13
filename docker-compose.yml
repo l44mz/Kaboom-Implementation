@@ -1,12 +1,34 @@
-﻿services:
-  mysql:
-    image: mysql:8
+﻿
+services:
+  db:
+    image: mysql:8.4
     environment:
-      MYSQL_DATABASE: kaboom
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    ports:
-      - "3306:3306"
+      MYSQL_DATABASE: kaboom_db
+      MYSQL_USER: kaboom_user
+      MYSQL_PASSWORD: kaboom_dev_password
+      MYSQL_ROOT_PASSWORD: kaboom_root_password
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pkaboom_root_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: "jdbc:mysql://db:3306/kaboom_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      DB_USERNAME: kaboom_user
+      DB_PASSWORD: kaboom_dev_password
+      PORT: 8080
+    ports:
+      - "8080:8080"
+
 volumes:
-  mysql-data:
+  mysql_data:
