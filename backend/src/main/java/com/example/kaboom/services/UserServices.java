@@ -38,7 +38,7 @@ public class UserServices {
                 || !isValidEmail(email) || !isValidPassword(dto.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid name, email or password");
         }
-        if (userRepository.findByEmail(email).isPresent()) { // email already registered
+        if (userRepository.findByEmail(email).isPresent()) { 
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
 
@@ -85,7 +85,7 @@ public class UserServices {
     public RefreshResponseDto refresh(RefreshDto dto) {
         String token = dto.getRefreshToken();
 
-        if (!jwtServices.isValidRefreshToken(token)) {   
+        if (!jwtServices.isValidRefreshToken(token)) {    
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
         }
 
@@ -108,6 +108,11 @@ public class UserServices {
         if (!userRepository.existsById(userId)) return false;
         userRepository.deleteById(userId);
         return true;
+    }
+
+    public User getUserById(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     private static boolean isValidEmail(String email) {
