@@ -17,9 +17,6 @@ public class UserController {
     private UserRepository userRepository;
     private UserMapper userMapper;
 
-    @GetMapping("/me")
-    public Iterable<UserDto> getCurrentUser() {
 
-    }
 
 }

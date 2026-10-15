@@ -1,12 +1,17 @@
 package com.example.kaboom.services;
 
+import com.example.kaboom.dtos.*;
 import com.example.kaboom.entities.User;
+import com.example.kaboom.mappers.UserMapper;
 import com.example.kaboom.repositories.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,34 +19,49 @@ import java.util.UUID;
 public class UserServices {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtServices jwtServices;
+    private final UserMapper userMapper;
 
-    public UserServices(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServices(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                        JwtServices jwtServices, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtServices = jwtServices;
+        this.userMapper = userMapper;
     }
 
     @Transactional
-    public boolean register(String name, String email, String rawPassword) {
-        if (name == null || !isValidEmail(email) || !isValidPassword(rawPassword)){
-            return false;
+    public RegisterResponseDto register(RegisterDto dto) {
+        String email = dto.getEmail() == null ? null : dto.getEmail().trim().toLowerCase(Locale.ROOT);
+
+        if (dto.getName() == null || dto.getName().isBlank()
+                || !isValidEmail(email) || !isValidPassword(dto.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid name, email or password");
         }
-        if (userRepository.findByEmail(email).isPresent()){ //checks to see if email is already registered
-            return false;
+        if (userRepository.findByEmail(email).isPresent()) { // email already registered
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
-       String hashedPassword = passwordEncoder.encode(rawPassword);
-        User user = new User(name, email, hashedPassword);
+
+        User user = new User(dto.getName().trim(), email, passwordEncoder.encode(dto.getPassword()));
+        user.setCreatedAt(LocalDateTime.now());
         userRepository.save(user);
-        return true;
+
+        return new RegisterResponseDto("User registered successfully", userMapper.toDto(user));
     }
 
-    @Transactional
-    public boolean login(String email, String rawPassword) {
-        if (isValidEmail(email) || isValidPassword(rawPassword)){
-            return false;
-        }
+    public LoginResponseDto login(LoginDto dto) {
+        String email = dto.getEmail() == null ? "" : dto.getEmail().trim().toLowerCase(Locale.ROOT);
 
-        Optional<User> userOpt = userRepository.findByEmail(email);
-        return userOpt.filter(user -> passwordEncoder.matches(rawPassword, user.getPasswordHash())).isPresent();
+        User user = userRepository.findByEmail(email)
+                .filter(u -> passwordEncoder.matches(dto.getPassword(), u.getPasswordHash()))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+
+        return new LoginResponseDto(
+                jwtServices.generateToken(user.getEmail(), user.getRole()),
+                jwtServices.generateRefreshToken(user.getEmail()),
+                jwtServices.getAccessExpirationSeconds(),
+                userMapper.toDto(user));
     }
 
     @Transactional
@@ -60,6 +80,27 @@ public class UserServices {
 
         userRepository.save(user);
         return true;
+    }
+
+    public RefreshResponseDto refresh(RefreshDto dto) {
+        String token = dto.getRefreshToken();
+
+        if (!jwtServices.isValidRefreshToken(token)) {   // rename to your method
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
+        }
+
+        String email = jwtServices.extractEmail(token);  // rename to your method
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token"));
+
+        return new RefreshResponseDto(
+                jwtServices.generateToken(user.getEmail(), user.getRole()),
+                jwtServices.getAccessExpirationSeconds());
+    }
+
+    public MessageResponseDto logout(LogoutDto dto) {
+        return new MessageResponseDto("Logged out");
     }
 
     @Transactional
