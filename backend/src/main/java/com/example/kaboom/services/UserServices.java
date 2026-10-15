@@ -85,11 +85,11 @@ public class UserServices {
     public RefreshResponseDto refresh(RefreshDto dto) {
         String token = dto.getRefreshToken();
 
-        if (!jwtServices.isValidRefreshToken(token)) {   // rename to your method
+        if (!jwtServices.isValidRefreshToken(token)) {   
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
         }
 
-        String email = jwtServices.extractEmail(token);  // rename to your method
+        String email = jwtServices.extractEmail(token);  
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token"));
