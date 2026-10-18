@@ -59,7 +59,7 @@ public class UserServices {
 
         return new LoginResponseDto(
                 jwtServices.generateToken(user.getEmail(), user.getRole()),
-                jwtServices.generateRefreshToken(user.getEmail()),
+
                 jwtServices.getAccessExpirationSeconds(),
                 userMapper.toDto(user));
     }

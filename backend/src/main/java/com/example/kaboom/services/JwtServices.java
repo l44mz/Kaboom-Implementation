@@ -56,7 +56,7 @@ public class JwtServices {
     }
 
     public String extractEmail(String token) {
-        return parse(token).getSubject();
+        return parse(token).getSubject(); //to extract the email from token
     }
 
     public long getAccessExpirationSeconds() {

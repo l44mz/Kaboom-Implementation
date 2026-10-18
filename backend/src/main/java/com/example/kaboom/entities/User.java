@@ -57,9 +57,6 @@ public class User {
 
 
 
-
-
-
     public void addReward(int amount){
         if (amount <= 0) throw new IllegalArgumentException("Amount cannot be negative!");
         coins += amount;

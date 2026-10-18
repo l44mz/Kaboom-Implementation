@@ -4,6 +4,7 @@ import com.example.kaboom.dtos.CreateSessionRequest;
 import com.example.kaboom.dtos.EndSessionResponse;
 import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.services.FocusSessionService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/focus-sessions")
+@Tag(name = "Focus Session", description = "Session time")
 public class FocusSessionController {
 
     private final FocusSessionService focusSessionService;
