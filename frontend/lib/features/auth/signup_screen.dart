@@ -60,7 +60,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // call the API
 
   Future<void> _onSubmit() async {
-    // Hide the keyboard and stop if any field is invalid.
+   
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
