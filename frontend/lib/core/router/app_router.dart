@@ -1,15 +1,15 @@
 import 'package:go_router/go_router.dart';
 
-import '../../features/admin/add_product_screen.dart';
-import '../../features/admin/admin_dashboard_screen.dart';
-import '../../features/auth/screen/login_screen.dart';
-import '../../features/auth/signup_screen.dart';
-import '../../features/history/history_screen.dart';
-import '../../features/home/home_screen.dart';
-import '../../features/robot/robot_pairing_screen.dart';
-import '../../features/session/focus_session_screen.dart';
-import '../../features/session/session_complete_screen.dart';
-import '../../features/shop/shop_screen.dart';
+import '../../features/admin/screens/add_product_screen.dart';
+import '../../features/admin/screens/admin_dashboard_screen.dart';
+import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/signup_screen.dart';
+import '../../features/history/screens/history_screen.dart';
+import '../../features/home/screens/home_screen.dart';
+import '../../features/robot/screens/robot_pairing_screen.dart';
+import '../../features/session/screens/focus_session_screen.dart';
+import '../../features/session/screens/session_complete_screen.dart';
+import '../../features/shop/screens/shop_screen.dart';
 
 class AppRoutes {
   static const login = '/login';

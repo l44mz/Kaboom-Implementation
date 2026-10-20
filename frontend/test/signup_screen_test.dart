@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kaboom_app/features/auth/signup_screen.dart';
+import 'package:kaboom_app/features/auth/screens/signup_screen.dart';
 
 void main() {
   testWidgets('shows errors when Sign Up is tapped with empty fields',
