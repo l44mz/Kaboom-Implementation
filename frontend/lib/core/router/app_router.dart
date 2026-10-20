@@ -2,7 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/admin/add_product_screen.dart';
 import '../../features/admin/admin_dashboard_screen.dart';
-import '../../features/auth/login_screen.dart';
+import '../../features/auth/screen/login_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/history/history_screen.dart';
 import '../../features/home/home_screen.dart';
