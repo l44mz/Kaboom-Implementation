@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../services/auth_service.dart';
@@ -74,47 +76,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (!mounted) return;
-      _showMessage('Account created! Please log in.');
+      showAppSnackBar(context, 'Account created! Please log in.');
       context.go(AppRoutes.login);
     } on DioException catch (e) {
       if (!mounted) return;
-      _showMessage(_errorMessage(e), isError: true);
+      final message = e.response?.statusCode == 409
+          ? 'This email is already registered.'
+          : apiErrorMessage(e);
+      showAppSnackBar(context, message, isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  String _errorMessage(DioException e) {
-    final response = e.response;
-
-    // No response at all: server is off or there is no internet.
-    if (response == null) {
-      return "Can't reach the server. Check your connection.";
-    }
-
-    if (response.statusCode == 409) {
-      return 'This email is already registered.';
-    }
-
-    // 400: show the first field error from the API (see docs section 5.8).
-    if (response.statusCode == 400 && response.data is Map) {
-      final fieldErrors = response.data['fieldErrors'];
-      if (fieldErrors is List && fieldErrors.isNotEmpty) {
-        return fieldErrors.first['message']?.toString() ?? 'Invalid input.';
-      }
-      return response.data['message']?.toString() ?? 'Invalid input.';
-    }
-
-    return 'Something went wrong. Please try again.';
-  }
-
-  void _showMessage(String text, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        backgroundColor: isError ? AppColors.away : AppColors.focused,
-      ),
-    );
   }
 
   // UI 
