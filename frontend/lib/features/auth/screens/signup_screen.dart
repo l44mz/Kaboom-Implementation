@@ -2,13 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/network/api_client.dart';
-import '../../core/router/app_router.dart';
-import '../../core/storage/token_storage.dart';
-import '../../core/theme/app_colors.dart';
-import '../../shared/widgets/app_text_field.dart';
-import '../../shared/widgets/primary_button.dart';
-import 'auth_service.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/router/app_router.dart';
+import '../../../core/storage/token_storage.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/app_text_field.dart';
+import '../../../shared/widgets/primary_button.dart';
+import '../services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -60,7 +60,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // call the API
 
   Future<void> _onSubmit() async {
-   
+    // Hide the keyboard and stop if any field is invalid.
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
