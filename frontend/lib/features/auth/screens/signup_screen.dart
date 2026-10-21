@@ -1,16 +1,13 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/network/api_client.dart';
-import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/storage/token_storage.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../services/auth_service.dart';
+import '../controllers/auth_controller.dart';
+import '../widgets/auth_footer_link.dart';
+import '../widgets/auth_header.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -24,72 +21,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService(ApiClient(TokenStorage()));
-  bool _isLoading = false;
+  final _controller = AuthController();
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  //  validation
-
-  String? _validateName(String? value) {
-    final name = value?.trim() ?? '';
-    if (name.isEmpty) return 'Please enter your name';
-    if (name.length > 100) return 'Name must be 100 characters or less';
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    final email = value?.trim() ?? '';
-    if (email.isEmpty) return 'Please enter your email';
-    final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    if (!emailPattern.hasMatch(email)) return 'Please enter a valid email';
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    final password = value ?? '';
-    if (password.isEmpty) return 'Please enter a password';
-    if (password.length < 8) return 'Password must be at least 8 characters';
-    return null;
-  }
-
-  // call the API
-
   Future<void> _onSubmit() async {
-    // Hide the keyboard and stop if any field is invalid.
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    final ok = await _controller.signUp(
+      name: _nameController.text,
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+    if (!mounted) return;
 
-    try {
-      await _authService.register(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      if (!mounted) return;
+    if (ok) {
       showAppSnackBar(context, 'Account created! Please log in.');
       context.go(AppRoutes.login);
-    } on DioException catch (e) {
-      if (!mounted) return;
-      final message = e.response?.statusCode == 409
-          ? 'This email is already registered.'
-          : apiErrorMessage(e);
-      showAppSnackBar(context, message, isError: true);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    } else {
+      showAppSnackBar(context, _controller.errorMessage!, isError: true);
     }
   }
-
-  // UI 
 
   @override
   Widget build(BuildContext context) {
@@ -102,28 +62,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Image.asset('assets/images/Robot.png', height: 128),
-                const SizedBox(height: 24),
-                const Text(
-                  'Create Your Account',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 34,
-                    height: 41 / 34,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Start Your Journey With Sparky!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    height: 21 / 16,
-                    fontWeight: FontWeight.w300,
-                    color: AppColors.textMuted,
-                  ),
+                const AuthHeader(
+                  title: 'Create Your Account',
+                  subtitle: 'Start Your Journey With Sparky!',
                 ),
                 const SizedBox(height: 32),
                 AppTextField(
@@ -131,7 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   hint: 'Your Name',
                   icon: Icons.person_outline,
                   controller: _nameController,
-                  validator: _validateName,
+                  validator: AuthController.validateName,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
@@ -140,7 +81,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   icon: Icons.mail_outline,
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  validator: _validateEmail,
+                  validator: AuthController.validateEmail,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
@@ -149,33 +90,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   icon: Icons.key_outlined,
                   controller: _passwordController,
                   obscureText: true,
-                  validator: _validatePassword,
+                  validator: AuthController.validateNewPassword,
                 ),
                 const SizedBox(height: 40),
-                PrimaryButton(
-                  label: 'Sign Up',
-                  onPressed: _onSubmit,
-                  isLoading: _isLoading,
+                ListenableBuilder(
+                  listenable: _controller,
+                  builder: (context, _) => PrimaryButton(
+                    label: 'Sign Up',
+                    onPressed: _onSubmit,
+                    isLoading: _controller.isLoading,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Already have an account?',
-                      style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                    ),
-                    TextButton(
-                      onPressed: () => context.go(AppRoutes.login),
-                      child: const Text(
-                        'Login here',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+                AuthFooterLink(
+                  question: 'Already have an account?',
+                  action: 'Login here',
+                  onTap: () => context.go(AppRoutes.login),
                 ),
               ],
             ),
