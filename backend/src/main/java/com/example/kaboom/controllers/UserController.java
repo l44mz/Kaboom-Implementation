@@ -1,4 +1,3 @@
-
 package com.example.kaboom.controllers;
 
 import com.example.kaboom.dtos.UserDto;
@@ -11,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication; // NEW
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -26,6 +26,24 @@ import java.util.UUID;
 public class UserController {
 
     private final UserServices userServices;
+
+    /**
+     * NEW: Returns the logged-in user's profile.
+     * The email comes from the access token (set by JwtAuthFilter).
+     */
+    @Operation(
+            summary = "Get the logged-in user",
+            description = "Returns the profile of the user who owns the access token."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Missing or invalid access token"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getMe(Authentication authentication) {
+        return ResponseEntity.ok(userServices.getByEmail(authentication.getName()));
+    }
 
     /**
      * Retrieves a user's profile by UUID.

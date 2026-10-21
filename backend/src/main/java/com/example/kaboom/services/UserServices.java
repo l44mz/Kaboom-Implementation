@@ -104,6 +104,16 @@ public class UserServices {
                 ));
     }
 
+    // NEW: finds the logged-in user by the email stored in their access token.
+    public UserDto getByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+        return userMapper.toDto(user);
+    }
+
     @Transactional
     public UserDto updateUser(UUID userId, UserDto dto) {
         User user = userRepository.findById(userId)
