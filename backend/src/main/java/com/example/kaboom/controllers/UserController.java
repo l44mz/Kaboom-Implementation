@@ -27,6 +27,20 @@ public class UserController {
 
     private final UserServices userServices;
 
+
+    @Operation(
+            summary = "Get my profile",
+            description = "Retrieves the profile of the current user."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getUserProfile(@RequestParam UUID userId) {
+        return ResponseEntity.ok(userServices.getUserDtoById(userId));
+    }
+
     /**
      * NEW: Returns the logged-in user's profile.
      * The email comes from the access token (set by JwtAuthFilter).

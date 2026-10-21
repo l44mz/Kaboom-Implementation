@@ -257,6 +257,7 @@ public class UserServices {
         return true;
     }
 
+
     private boolean isValidEmail(String email) {
         return email != null
                 && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -264,5 +265,10 @@ public class UserServices {
 
     private boolean isValidPassword(String password) {
         return password != null && password.length() >= 8;
+    }
+
+
+    public UserDto getUserDtoById(UUID id) {
+        return userMapper.toDto(getUserById(id));
     }
 }
