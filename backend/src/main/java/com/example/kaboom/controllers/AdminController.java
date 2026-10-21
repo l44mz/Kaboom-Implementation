@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/admin")
+@RequestMapping("/admin")
 @Tag(
         name = "Admin",
         description = "Administrative operations for managing store products"
