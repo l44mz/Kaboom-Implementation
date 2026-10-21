@@ -1,22 +1,53 @@
 package com.example.kaboom.entities;
 
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.time.*;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
-
-
-
+@Entity
+@Table(name = "users")
+@NoArgsConstructor
+@Getter
+@Setter
 public class User {
-    private int id;
-    private String name;
-    private String email;
-    private String passwordHash;
-    private int coin;
-    private String role;
-    private LocalTime createdAt;
 
-    public User(int id, String name, String email, String passwordHash) {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
+    private int coins;
+
+    @Setter(AccessLevel.PROTECTED)
+    @Column(name = "role")
+    private String role = "user";
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+
+
+    public User(UUID id, String name, String email) {
         this.id = id;
+        this.name = name;
+        this.email = email;
+    }
+
+    public User(String name, String email, String passwordHash) {
         this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
@@ -24,17 +55,10 @@ public class User {
 
 
 
+    public void addReward(int amount){
+        if (amount <= 0) throw new IllegalArgumentException("Amount cannot be negative!");
+        coins += amount;
+    }
 
-
-
-
-
-    private static boolean isValidEmail(String email) {
-        return email != null && email.matches("^[A-Za-z0-9._]+@[A-Za-z0-9.]+\\.[A-Za-z]{2,}$");
-     }
-
-     private static boolean isValidPassword(String password) {
-        return password != null && password.length() >= 8 && password.matches(".*\\\\d.*");
-     }
 
 }
