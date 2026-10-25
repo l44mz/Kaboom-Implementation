@@ -254,7 +254,8 @@ class UserServicesTest {
     @Test
     void updateUser_blankName_throwsBadRequest() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findById(id)).thenReturn(Optional.of(userWithId(id)));
+        User existing = userWithId(id);
+        when(userRepository.findById(id)).thenReturn(Optional.of(existing));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> userServices.updateUser(id, userDto("   ", "me@example.com")));
@@ -266,7 +267,8 @@ class UserServicesTest {
     @Test
     void updateUser_invalidEmail_throwsBadRequest() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findById(id)).thenReturn(Optional.of(userWithId(id)));
+        User existing = userWithId(id);
+        when(userRepository.findById(id)).thenReturn(Optional.of(existing));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> userServices.updateUser(id, userDto("Me", "not-an-email")));
@@ -277,9 +279,10 @@ class UserServicesTest {
     @Test
     void updateUser_emailBelongsToAnotherUser_throwsConflict() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findById(id)).thenReturn(Optional.of(userWithId(id)));
-        when(userRepository.findByEmail("other@example.com"))
-                .thenReturn(Optional.of(userWithId(UUID.randomUUID())));
+        User existing = userWithId(id);
+        User other = userWithId(UUID.randomUUID());
+        when(userRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(userRepository.findByEmail("other@example.com")).thenReturn(Optional.of(other));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> userServices.updateUser(id, userDto("Me", "other@example.com")));
@@ -302,8 +305,8 @@ class UserServicesTest {
     @Test
     void update_invalidEmail_returnsFalse() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findById(id)).thenReturn(Optional.of(userWithId(id)));
-
+        User existing =  userWithId(id);
+        when(userRepository.findById(id)).thenReturn(Optional.of(existing));
         assertFalse(userServices.update(id, null, "bad-email", null));
         verify(userRepository, never()).save(any());
     }
@@ -311,7 +314,8 @@ class UserServicesTest {
     @Test
     void update_shortPassword_returnsFalse() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findById(id)).thenReturn(Optional.of(userWithId(id)));
+        User update =  userWithId(id);
+        when(userRepository.findById(id)).thenReturn(Optional.of(update));
 
         assertFalse(userServices.update(id, null, null, "short"));
         verify(userRepository, never()).save(any());
@@ -320,9 +324,11 @@ class UserServicesTest {
     @Test
     void update_emailBelongsToAnotherUser_throwsConflict() {
         UUID id = UUID.randomUUID();
-        when(userRepository.findById(id)).thenReturn(Optional.of(userWithId(id)));
-        when(userRepository.findByEmail("other@example.com"))
-                .thenReturn(Optional.of(userWithId(UUID.randomUUID())));
+        User existing = userWithId(id);
+        User other = userWithId(UUID.randomUUID());
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(userRepository.findByEmail("other@example.com")).thenReturn(Optional.of(other));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> userServices.update(id, null, "other@example.com", null));
