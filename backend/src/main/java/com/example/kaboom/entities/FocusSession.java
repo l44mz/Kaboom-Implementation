@@ -1,6 +1,7 @@
 
 package com.example.kaboom.entities;
 
+import com.example.kaboom.enums.FocusState;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,14 @@ import java.util.UUID;
 @Getter
 @Setter
 public class FocusSession {
+
+    @Enumerated(EnumType.STRING)
+    private FocusState currentState;       // last state reported by the robot
+
+    private LocalDateTime lastEventAt;     // null while paused or before the first event
+    private long lastSequenceNumber = 0;
+    private int distractedSeconds = 0;
+    private int awaySeconds = 0;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
