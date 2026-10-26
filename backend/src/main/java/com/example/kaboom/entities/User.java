@@ -48,9 +48,16 @@ public class User {
     }
 
     public User(String name, String email, String passwordHash) {
+    this.name = name;
+    this.email = email;
+    this.passwordHash = passwordHash;
+}
+
+    public User(String name, String email, String passwordHash , String role) {
         this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.role = role;
     }
 
 
