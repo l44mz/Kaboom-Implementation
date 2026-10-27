@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context.go(AppRoutes.session, extra: session);
     } catch (e) {
       if (!mounted) return;
-      showAppSnackBar(context, apiErrorMessage(e), isError: true);
+      showAppSnackBar(context, startSessionErrorMessage(e), isError: true);
     } finally {
       if (mounted) setState(() => _isStarting = false);
     }
