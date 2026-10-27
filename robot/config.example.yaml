@@ -1,0 +1,22 @@
+# Copy to config.yaml (ignored by git) and change what you need.
+
+camera:
+  source: opencv      # opencv = laptop or USB webcam, picamera2 = Pi Camera Module
+  index: 0            # which webcam when there is more than one
+  width: 640
+  height: 480
+
+vision:
+  model_path: models/face_landmarker.task
+  calibration_s: 3    # seconds to learn the user's normal working pose
+  thresholds:
+    ear_closed: 0.15
+    gaze_off: 0.20
+    yaw_deg: 30
+    pitch_deg: 20
+    roll_deg: 30
+    eyes_closed_after_s: 3
+    distracted_after_s: 5
+    away_after_s: 8
+    recover_after_s: 1
+    grace_s: 0.5
