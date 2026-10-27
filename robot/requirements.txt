@@ -1,0 +1,7 @@
+# Runtime
+mediapipe>=1.0,<2    # face landmarks; also installs opencv-contrib-python (cv2) and numpy
+pyyaml>=6.0          # reads config.yaml
+
+# Development
+pytest>=8.0
+ruff>=0.6
