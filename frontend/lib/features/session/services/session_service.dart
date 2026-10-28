@@ -1,4 +1,7 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error.dart';
 import '../models/focus_session.dart';
 
 /// API calls for focus sessions.
@@ -21,4 +24,12 @@ class SessionService {
     );
     return FocusSession.fromJson(response.data as Map<String, dynamic>);
   }
+}
+
+/// The message to show when starting a session fails.
+String startSessionErrorMessage(Object error) {
+  if (error is DioException && error.response?.statusCode == 409) {
+    return 'You already have a session running.';
+  }
+  return apiErrorMessage(error);
 }

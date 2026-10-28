@@ -7,6 +7,7 @@ import '../../features/auth/screens/signup_screen.dart';
 import '../../features/history/screens/history_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/robot/screens/robot_pairing_screen.dart';
+import '../../features/session/models/focus_session.dart';
 import '../../features/session/screens/focus_session_screen.dart';
 import '../../features/session/screens/session_complete_screen.dart';
 import '../../features/shop/screens/shop_screen.dart';
@@ -30,7 +31,11 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginScreen()),
     GoRoute(path: AppRoutes.signUp, builder: (context, state) => const SignUpScreen()),
     GoRoute(path: AppRoutes.home, builder: (context, state) => const HomeScreen()),
-    GoRoute(path: AppRoutes.session, builder: (context, state) => const FocusSessionScreen()),
+    GoRoute(
+      path: AppRoutes.session,
+      builder: (context, state) =>
+          FocusSessionScreen(session: state.extra as FocusSession?),
+    ),
     GoRoute(path: AppRoutes.sessionComplete, builder: (context, state) => const SessionCompleteScreen()),
     GoRoute(path: AppRoutes.shop, builder: (context, state) => const ShopScreen()),
     GoRoute(path: AppRoutes.robotPair, builder: (context, state) => const RobotPairingScreen()),
