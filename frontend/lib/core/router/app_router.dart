@@ -27,7 +27,7 @@ class AppRoutes {
 }
 
 final appRouter = GoRouter(
-  initialLocation: AppRoutes.signUp,
+  initialLocation: AppRoutes.home, // DEMO ONLY: was AppRoutes.signUp
   routes: [
     GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginScreen()),
     GoRoute(path: AppRoutes.signUp, builder: (context, state) => const SignUpScreen()),
@@ -35,12 +35,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.session,
       builder: (context, state) =>
-          FocusSessionScreen(session: state.extra as FocusSession?),
+          FocusSessionScreen(session: state.extra as FocusSession? ?? FocusSession(id: 'demo', plannedDurationSeconds: 3600, startTime: DateTime.now().subtract(const Duration(minutes: 29, seconds: 38)), status: 'active')), // DEMO ONLY: fallback session
     ),
     GoRoute(
       path: AppRoutes.sessionComplete,
       builder: (context, state) =>
-          SessionCompleteScreen(result: state.extra as SessionResult?),
+          SessionCompleteScreen(result: state.extra as SessionResult? ?? SessionResult.local(focusedSeconds: 3600, endedEarly: false)), // DEMO ONLY: fallback result
     ),
     GoRoute(path: AppRoutes.shop, builder: (context, state) => const ShopScreen()),
     GoRoute(path: AppRoutes.robotPair, builder: (context, state) => const RobotPairingScreen()),

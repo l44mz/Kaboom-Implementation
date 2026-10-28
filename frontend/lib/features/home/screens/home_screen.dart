@@ -1,5 +1,8 @@
+import 'package:dio/dio.dart'; // DEMO ONLY
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../session/models/focus_session.dart'; // DEMO ONLY
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -49,7 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
     try {
-      final user = await _userService.getMe();
+      // DEMO ONLY: fake user instead of GET /users/me.
+      final user = const User(id: '1', name: 'Shahd', email: 'a@b.com', coins: 340, role: 'admin');
       if (!mounted) return;
       setState(() => _user = user);
     } catch (e) {
@@ -63,9 +67,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _startSession() async {
     setState(() => _isStarting = true);
     try {
-      final session = await _sessionService.startSession(
-        plannedDurationSeconds: _minutes * 60,
-      );
+      // DEMO ONLY: fake backend. 10 min = 409 conflict, any other = success.
+      await Future<void>.delayed(const Duration(seconds: 1));
+      final req = RequestOptions(path: '/focus-sessions/start');
+      if (_minutes == 10) {
+        throw DioException(requestOptions: req, response: Response(requestOptions: req, statusCode: 409));
+      }
+      final session = FocusSession(id: 'demo-session', plannedDurationSeconds: _minutes * 60, startTime: DateTime.now(), status: 'active');
       if (!mounted) return;
       context.go(AppRoutes.session, extra: session);
     } catch (e) {
