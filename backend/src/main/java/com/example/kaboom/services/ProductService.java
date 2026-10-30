@@ -20,8 +20,14 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
+    // Returns only available products for regular shop users.
     public List<Product> getAllProducts() {
         return productRepository.findByIsAvailableTrue();
+    }
+
+    // Returns all products, including hidden ones, for admin management.
+    public List<Product> getAllProductsForAdmin() {
+        return productRepository.findAll();
     }
 
     public Product getProductById(UUID id) {
@@ -32,16 +38,43 @@ public class ProductService {
                 ));
     }
 
-   
-public Product createProduct(ProductDto productDto) {
-    Product product = new Product(
-            productDto.getName(),
-            productDto.getCategory(),
-            productDto.getPrice(),
-            productDto.getDescription()
-    );
+    public Product createProduct(ProductDto productDto) {
+        Product product = new Product(
+                productDto.getName(),
+                productDto.getCategory(),
+                productDto.getPrice(),
+                productDto.getDescription()
+        );
 
-    return productRepository.save(product); 
-}
+        product.setStock(productDto.getStock());
 
+        return productRepository.save(product);
+    }
+
+    // Updates an existing product's details.
+    public Product updateProduct(UUID id, ProductDto productDto) {
+        Product product = getProductById(id);
+
+        product.setName(productDto.getName());
+        product.setCategory(productDto.getCategory());
+        product.setPrice(productDto.getPrice());
+        product.setDescription(productDto.getDescription());
+        product.setStock(productDto.getStock());
+
+        return productRepository.save(product);
+    }
+
+    // Shows or hides a product without deleting it.
+    public Product setProductAvailability(UUID id, boolean available) {
+        Product product = getProductById(id);
+
+        product.setAvailable(available);
+
+        return productRepository.save(product);
+    }
+
+    public void deleteProduct(UUID id) {
+        Product product = getProductById(id);
+        productRepository.delete(product);
+    }
 }

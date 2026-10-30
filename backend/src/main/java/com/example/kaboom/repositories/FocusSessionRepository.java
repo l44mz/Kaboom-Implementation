@@ -1,3 +1,4 @@
+
 package com.example.kaboom.repositories;
 
 import com.example.kaboom.entities.FocusSession;
@@ -6,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +16,11 @@ public interface FocusSessionRepository extends JpaRepository<FocusSession, UUID
 
     @Query("SELECT f FROM FocusSession f WHERE f.user.id = :userId AND f.status IN (com.example.kaboom.entities.FocusSession.SessionStatus.active, com.example.kaboom.entities.FocusSession.SessionStatus.paused)")
     Optional<FocusSession> findActiveOrPausedSessionByUserId(@Param("userId") UUID userId);
+
+    // Count focus sessions that started within the specified day.
+    @Query("SELECT COUNT(f) FROM FocusSession f WHERE f.startTime >= :start AND f.startTime < :end")
+    long countSessionsStartedBetween(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
 }

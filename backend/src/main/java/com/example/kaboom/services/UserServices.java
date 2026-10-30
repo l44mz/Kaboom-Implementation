@@ -1,3 +1,4 @@
+
 package com.example.kaboom.services;
 
 import com.example.kaboom.dtos.*;
@@ -61,6 +62,9 @@ public class UserServices {
                 email,
                 passwordEncoder.encode(dto.getPassword())
         );
+
+        // Give every newly registered user 100 coins as a starting balance.
+        user.setCoins(100);
 
         user.setCreatedAt(LocalDateTime.now());
         userRepository.save(user);
