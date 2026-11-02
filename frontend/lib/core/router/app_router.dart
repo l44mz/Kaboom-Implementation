@@ -49,7 +49,6 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.admin, builder: (context, state) => const AdminDashboardScreen()),
     GoRoute(
       path: AppRoutes.addProduct,
-      // extra = the product to edit, or null to add a new one
       builder: (context, state) => AddProductScreen(product: state.extra as Product?),
     ),
   ],
