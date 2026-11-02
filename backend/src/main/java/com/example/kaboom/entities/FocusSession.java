@@ -1,6 +1,6 @@
-
 package com.example.kaboom.entities;
 
+import com.example.kaboom.enums.FocusState;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -59,6 +59,27 @@ public class FocusSession {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SessionStatus status = SessionStatus.active;
+
+    // ----- Filled in by the robot's focus-state reports -----
+
+    /** Last state the robot reported (null until the first report). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_state")
+    private FocusState currentState;
+
+    /** When the last report arrived (null while paused or before the first report). */
+    @Column(name = "last_event_at")
+    private LocalDateTime lastEventAt;
+
+    /** Highest sequence number accepted, so old or repeated reports are ignored. */
+    @Column(name = "last_sequence_number", nullable = false)
+    private long lastSequenceNumber = 0;
+
+    @Column(name = "distracted_seconds", nullable = false)
+    private int distractedSeconds = 0;
+
+    @Column(name = "away_seconds", nullable = false)
+    private int awaySeconds = 0;
 
     public enum SessionStatus {
         active,

@@ -1,4 +1,3 @@
-
 package com.example.kaboom.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -44,6 +43,14 @@ public class SessionResponse {
     )
     private String status;
 
+    @Schema(
+            description = "Last state reported by the robot: FOCUSED, DISTRACTED or AWAY "
+                    + "(null until the robot sends its first state)",
+            example = "FOCUSED",
+            nullable = true
+    )
+    private String currentState;
+
     public SessionResponse() {
     }
 
@@ -53,11 +60,22 @@ public class SessionResponse {
             Integer plannedDurationSeconds,
             LocalDateTime startTime,
             String status) {
+        this(id, robotId, plannedDurationSeconds, startTime, status, null);
+    }
+
+    public SessionResponse(
+            UUID id,
+            UUID robotId,
+            Integer plannedDurationSeconds,
+            LocalDateTime startTime,
+            String status,
+            String currentState) {
         this.id = id;
         this.robotId = robotId;
         this.plannedDurationSeconds = plannedDurationSeconds;
         this.startTime = startTime;
         this.status = status;
+        this.currentState = currentState;
     }
 
     public UUID getId() {
@@ -98,5 +116,13 @@ public class SessionResponse {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getCurrentState() {
+        return currentState;
+    }
+
+    public void setCurrentState(String currentState) {
+        this.currentState = currentState;
     }
 }

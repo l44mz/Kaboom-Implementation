@@ -1,4 +1,3 @@
-
 package com.example.kaboom.services;
 
 import com.example.kaboom.dtos.*;
@@ -106,6 +105,16 @@ public class UserServices {
                         HttpStatus.NOT_FOUND,
                         "User not found"
                 ));
+    }
+
+    // NEW: finds the logged-in user by the email stored in their access token.
+    public UserDto getByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+        return userMapper.toDto(user);
     }
 
     @Transactional

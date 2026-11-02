@@ -1,8 +1,9 @@
-
 package com.example.kaboom.services;
 
 import com.example.kaboom.dtos.CreateSessionRequest;
 import com.example.kaboom.dtos.EndSessionResponse;
+import com.example.kaboom.dtos.FocusStateRequest;
+import com.example.kaboom.dtos.FocusStateResponse;
 import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.entities.FocusSession;
 import com.example.kaboom.entities.Robot;
@@ -18,15 +19,20 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Manages focus session lifecycle, timing, and rewards.
+ * Manages focus session lifecycle, robot state reporting, timing, and rewards.
  */
 @Service
 public class FocusSessionService {
 
     private static final int MAX_REWARD = 30;
+
+    /** Gaps between robot reports longer than this (e.g. a Wi-Fi drop) are not counted. */
+    private static final long MAX_GAP_SECONDS = 30;
 
     private final FocusSessionRepository focusSessionRepository;
     private final UserRepository userRepository;
@@ -43,6 +49,8 @@ public class FocusSessionService {
 
     /**
      * Starts a new focus session for a user.
+     * If the app sends no robotId, the user's own robot (if they have one) is attached,
+     * so the robot can find the session.
      */
     @Transactional
     public SessionResponse startSession(
@@ -60,7 +68,7 @@ public class FocusSessionService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-        Robot robot = null;
+        Robot robot;
 
         if (request.getRobotId() != null) {
             robot = robotRepository.findById(request.getRobotId())
@@ -72,6 +80,12 @@ public class FocusSessionService {
                 throw new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Robot not found");
             }
+        } else {
+            // No robot chosen in the app: use the user's robot, or none.
+            robot = robotRepository.findByUserId(userId)
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
         }
 
         FocusSession session = new FocusSession(
@@ -86,7 +100,17 @@ public class FocusSessionService {
     }
 
     /**
+     * Returns one of the user's sessions, including the robot's latest state.
+     * The app polls this during a session.
+     */
+    @Transactional(readOnly = true)
+    public SessionResponse getSession(UUID userId, UUID sessionId) {
+        return toSessionResponse(getOwnedSession(userId, sessionId));
+    }
+
+    /**
      * Pauses an active session and records the pause start time.
+     * Time up to the pause is credited to the last reported state.
      */
     @Transactional
     public SessionResponse pauseSession(UUID userId, UUID sessionId) {
@@ -98,7 +122,12 @@ public class FocusSessionService {
                     "Only an active session can be paused");
         }
 
-        session.setPauseStartedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+
+        accrueTime(session, now);
+        session.setLastEventAt(null);   // nothing accrues while paused
+
+        session.setPauseStartedAt(now);
         session.setStatus(FocusSession.SessionStatus.paused);
 
         return toSessionResponse(focusSessionRepository.save(session));
@@ -130,6 +159,7 @@ public class FocusSessionService {
         }
 
         session.setPauseStartedAt(null);
+        session.setLastEventAt(null);   // counting restarts at the next robot report
         session.setStatus(FocusSession.SessionStatus.active);
 
         return toSessionResponse(focusSessionRepository.save(session));
@@ -137,8 +167,7 @@ public class FocusSessionService {
 
     /**
      * Ends an active or paused session and updates the user's coin balance.
-     *
-     * Focus time must be populated from recorded state intervals.
+     * Focus time comes from the states reported by the robot.
      */
     @Transactional
     public EndSessionResponse endSession(UUID userId, UUID sessionId) {
@@ -151,6 +180,11 @@ public class FocusSessionService {
         }
 
         LocalDateTime now = LocalDateTime.now();
+
+        if (session.getStatus() == FocusSession.SessionStatus.active) {
+            // Credit the last few seconds since the robot's final report.
+            accrueTime(session, now);
+        }
 
         // Include the current pause if the session is still paused.
         if (session.getStatus() == FocusSession.SessionStatus.paused
@@ -175,8 +209,6 @@ public class FocusSessionService {
         int activeDuration = Math.max(
                 0, totalDuration - session.getPausedSeconds());
 
-        // Focus time must come from state logs.
-        // Until state logging is implemented, the stored value may be zero.
         int focusedSeconds = Math.min(
                 activeDuration,
                 Math.max(0, session.getFocusedSeconds()));
@@ -193,6 +225,7 @@ public class FocusSessionService {
         session.setRewardEarned(reward);
 
         session.setPauseStartedAt(null);
+        session.setLastEventAt(null);
         session.setStatus(FocusSession.SessionStatus.completed);
 
         User user = session.getUser();
@@ -211,6 +244,97 @@ public class FocusSessionService {
                 session.getRewardEarned(),
                 updatedCoins
         );
+    }
+
+    /**
+     * Returns the robot's current session (active or paused), if any.
+     * The robot polls this every few seconds.
+     */
+    @Transactional(readOnly = true)
+    public Optional<SessionResponse> getActiveSessionForRobot(UUID robotId) {
+        return focusSessionRepository
+                .findFirstByRobot_IdAndStatusInOrderByStartTimeDesc(
+                        robotId,
+                        List.of(FocusSession.SessionStatus.active,
+                                FocusSession.SessionStatus.paused))
+                .map(this::toSessionResponse);
+    }
+
+    /**
+     * Records a state reported by the robot and returns the expression to display.
+     * Reports for sessions that are not active, and old sequence numbers, are ignored (not errors).
+     */
+    @Transactional
+    public FocusStateResponse recordState(UUID robotId, FocusStateRequest request) {
+        FocusSession session = focusSessionRepository
+                .findByIdForUpdate(request.sessionId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Session not found"));
+
+        if (session.getRobot() == null
+                || !session.getRobot().getId().equals(robotId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "Robot does not own this session");
+        }
+
+        if (session.getStatus() != FocusSession.SessionStatus.active) {
+            return new FocusStateResponse(
+                    "Session is not active; event ignored",
+                    session.getCurrentState(),
+                    session.getLastSequenceNumber());
+        }
+
+        if (request.sequenceNumber() <= session.getLastSequenceNumber()) {
+            return new FocusStateResponse(
+                    "Stale event ignored",
+                    session.getCurrentState(),
+                    session.getLastSequenceNumber());
+        }
+
+        // The server clock is used, so the robot's clock cannot change rewards.
+        LocalDateTime now = LocalDateTime.now();
+        accrueTime(session, now);
+
+        session.setCurrentState(request.state());
+        session.setLastEventAt(now);
+        session.setLastSequenceNumber(request.sequenceNumber());
+
+        // Save the matching face on the robot, so the app can read it later.
+        Robot.Expression expression = switch (request.state()) {
+            case FOCUSED -> Robot.Expression.smile;
+            case DISTRACTED -> Robot.Expression.distressed;
+            case AWAY -> Robot.Expression.eyes_closed;
+        };
+        session.getRobot().setCurrentExpression(expression);
+        session.getRobot().setConnectionState(Robot.ConnectionState.connected);
+
+        focusSessionRepository.save(session);
+
+        return new FocusStateResponse(
+                "State recorded",
+                request.state(),
+                request.sequenceNumber());
+    }
+
+    /**
+     * Credits the time since the last report to the previous state.
+     * Does nothing before the first report or right after a pause/resume.
+     */
+    private void accrueTime(FocusSession session, LocalDateTime now) {
+        if (session.getCurrentState() == null || session.getLastEventAt() == null) {
+            return;
+        }
+
+        long elapsed = Duration.between(session.getLastEventAt(), now).getSeconds();
+        int seconds = (int) Math.min(Math.max(elapsed, 0), MAX_GAP_SECONDS);
+
+        switch (session.getCurrentState()) {
+            case FOCUSED -> session.setFocusedSeconds(session.getFocusedSeconds() + seconds);
+            case DISTRACTED -> session.setDistractedSeconds(session.getDistractedSeconds() + seconds);
+            case AWAY -> session.setAwaySeconds(session.getAwaySeconds() + seconds);
+        }
+
+        session.setLastEventAt(now);
     }
 
     private FocusSession getOwnedSession(UUID userId, UUID sessionId) {
@@ -232,12 +356,17 @@ public class FocusSessionService {
                 ? session.getRobot().getId()
                 : null;
 
+        String currentState = session.getCurrentState() != null
+                ? session.getCurrentState().name()
+                : null;
+
         return new SessionResponse(
                 session.getId(),
                 robotId,
                 session.getPlannedDurationSeconds(),
                 session.getStartTime(),
-                session.getStatus().name()
+                session.getStatus().name(),
+                currentState
         );
     }
 }

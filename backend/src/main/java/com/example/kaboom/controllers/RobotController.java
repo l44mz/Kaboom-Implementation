@@ -1,7 +1,10 @@
-
 package com.example.kaboom.controllers;
 
+import com.example.kaboom.dtos.FocusStateRequest;
+import com.example.kaboom.dtos.FocusStateResponse;
+import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.entities.Robot;
+import com.example.kaboom.services.FocusSessionService;
 import com.example.kaboom.services.RobotService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -9,29 +12,33 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 /**
- * Handles requests for retrieving and selecting robots.
+ * Handles requests for retrieving and selecting robots,
+ * and the calls the robot itself makes during a session.
  *
- * Robot business logic is delegated to RobotService.
+ * Robot business logic is delegated to RobotService and FocusSessionService.
  * Users must only be able to access robots associated with their own accounts.
  */
 @RestController
 @RequestMapping("/robots")
 @Tag(
         name = "Robots",
-        description = "Retrieve the user's robot and manage robot selection."
+        description = "Retrieve the user's robot, manage robot selection, and robot session calls."
 )
 public class RobotController {
 
     private final RobotService robotService;
+    private final FocusSessionService focusSessionService;
 
-    public RobotController(RobotService robotService) {
+    public RobotController(RobotService robotService, FocusSessionService focusSessionService) {
         this.robotService = robotService;
+        this.focusSessionService = focusSessionService;
     }
 
     /**
@@ -93,5 +100,27 @@ public class RobotController {
 
         // TODO: Verify the authenticated user and robot ownership before selecting the robot.
         return ResponseEntity.ok(robotService.selectRobot(userId, robotId));
+    }
+
+    @Operation(summary = "Get the robot's current session",
+            description = "Polled by the robot. Returns 204 when no session is active or paused.")
+    @GetMapping("/me/active-session")
+    public ResponseEntity<SessionResponse> getActiveSession(
+            @RequestParam UUID robotId) {   // TODO: take robotId from a device token, not the client
+
+        return focusSessionService.getActiveSessionForRobot(robotId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @Operation(summary = "Report a focus state",
+            description = "Called by the robot when the state changes, and as a heartbeat.")
+    @PostMapping("/{robotId}/focus-states")
+    public ResponseEntity<FocusStateResponse> reportFocusState(
+            @PathVariable UUID robotId,
+            @Valid @RequestBody FocusStateRequest request) {
+
+        // TODO: when device tokens exist, return 403 unless the token's robot equals robotId.
+        return ResponseEntity.ok(focusSessionService.recordState(robotId, request));
     }
 }
