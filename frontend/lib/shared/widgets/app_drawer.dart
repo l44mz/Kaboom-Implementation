@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../controllers/user_controller.dart';
 import '../models/user.dart';
 
 /// The side menu (Figma "Menu Open").
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key, this.user});
-
-  final User? user;
+  const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Nullable so screens tested on their own (without the app's provider) still work.
+    final user = context.watch<UserController?>()?.user;
+
     return Drawer(
       backgroundColor: AppColors.surface,
       child: SafeArea(
@@ -78,6 +81,7 @@ class AppDrawer extends StatelessWidget {
   Future<void> _logout(BuildContext context) async {
     await TokenStorage().clear();
     if (!context.mounted) return;
+    context.read<UserController?>()?.clear();
     context.go(AppRoutes.login);
   }
 }
