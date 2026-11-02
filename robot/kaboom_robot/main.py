@@ -2,22 +2,37 @@
 with the camera while it runs, and reports FOCUSED / DISTRACTED / AWAY to the backend.
 
 Run from the robot folder:
-    python -m kaboom_robot.main
-Press Ctrl+C to stop.
+    python -m kaboom_robot.main            # text only (over SSH)
+    python -m kaboom_robot.main --window   # also shows the live camera (Pi desktop / VNC)
+Press Ctrl+C (or q in the window) to stop.
 """
 
+import argparse
 import time
+
+import cv2
 
 from kaboom_robot.api.backend import BackendClient, BackendError
 from kaboom_robot.config import RobotConfig, load_config
 from kaboom_robot.vision.calibration import Baseline
 from kaboom_robot.vision.camera import Camera
 from kaboom_robot.vision.face_tracker import FaceTracker
-from kaboom_robot.vision.state_machine import FocusStateMachine
+from kaboom_robot.vision.state_machine import FocusState, FocusStateMachine
 
 HEARTBEAT_S = 10  # resend the current state this often, so the backend keeps counting time
 CHECK_SESSION_S = 3  # during a session, how often to check it is still running
 RETRY_S = 2  # after a failed report, wait this long before trying again
+
+WINDOW_TITLE = "Sparky (q to quit)"
+COLORS = {  # BGR, same as the vision demo
+    FocusState.FOCUSED: (80, 200, 80),
+    FocusState.DISTRACTED: (40, 170, 240),
+    FocusState.AWAY: (60, 60, 230),
+}
+
+
+class QuitRequested(Exception):
+    """The user pressed q in the camera window."""
 
 
 def wait_for_active_session(backend: BackendClient, poll_s: float) -> dict:
@@ -52,7 +67,32 @@ def session_still_active(backend: BackendClient, session_id: str) -> bool:
     )
 
 
-def watch_session(cfg: RobotConfig, backend: BackendClient, session_id: str) -> None:
+def show_frame(frame, status: str, color, sent: str, obs) -> None:
+    """Draw the state on the frame and show it. Raises QuitRequested when q is pressed."""
+    lines = [
+        status,
+        f"face: {'yes' if obs.face_present else 'no'}",
+        f"sent to backend: {sent}",
+    ]
+    for i, text in enumerate(lines):
+        cv2.putText(
+            frame,
+            text,
+            (16, 36 + i * 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0 if i == 0 else 0.6,
+            color if i == 0 else (255, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+    cv2.imshow(WINDOW_TITLE, frame)
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        raise QuitRequested
+
+
+def watch_session(
+    cfg: RobotConfig, backend: BackendClient, session_id: str, window: bool = False
+) -> None:
     """Run the camera and report states until the session is paused or ended."""
     print(f"Session {session_id} is running. Look at your screen for a few seconds...")
     baseline = Baseline(seconds=cfg.vision.calibration_s)
@@ -65,46 +105,62 @@ def watch_session(cfg: RobotConfig, backend: BackendClient, session_id: str) -> 
     last_check = start
 
     with Camera(**vars(cfg.camera)) as camera, FaceTracker(cfg.vision.model_path) as tracker:
-        while True:
-            frame = camera.read()
-            if frame is None:
-                print("Camera stopped.")
-                return
-            now = time.monotonic()
-
-            obs = tracker.process(frame, int((now - start) * 1000))
-            if not baseline.ready:
-                baseline.add(now, obs)
-                if baseline.ready:
-                    print("Calibrated. Watching...")
-            else:
-                state = machine.update(now, baseline.apply(obs))
-                changed = state != last_sent_state
-                due = changed or now - last_sent_at >= HEARTBEAT_S
-                if due and now >= retry_at:
-                    event_type = "STATE_CHANGE" if changed else "HEARTBEAT"
-                    try:
-                        reply = backend.report_state(session_id, state.value, event_type)
-                        if changed:
-                            reason = ", ".join(machine.reasons) or "all good"
-                            print(
-                                f"{now - start:7.1f}s  {state.value:<10} ({reason})"
-                                f"  -> backend: {reply.get('message', 'ok')}"
-                            )
-                        last_sent_state = state
-                        last_sent_at = now
-                    except BackendError as e:
-                        print(f"Could not send {state.value}: {e}")
-                        retry_at = now + RETRY_S
-
-            if now - last_check >= CHECK_SESSION_S:
-                last_check = now
-                if not session_still_active(backend, session_id):
-                    print("Session paused or ended. Camera off.")
+        try:
+            while True:
+                frame = camera.read()
+                if frame is None:
+                    print("Camera stopped.")
                     return
+                now = time.monotonic()
+
+                obs = tracker.process(frame, int((now - start) * 1000))
+                if not baseline.ready:
+                    baseline.add(now, obs)
+                    status, color = "Calibrating...", (200, 200, 200)
+                    if baseline.ready:
+                        print("Calibrated. Watching...")
+                else:
+                    state = machine.update(now, baseline.apply(obs))
+                    status, color = state.value, COLORS[state]
+                    changed = state != last_sent_state
+                    due = changed or now - last_sent_at >= HEARTBEAT_S
+                    if due and now >= retry_at:
+                        event_type = "STATE_CHANGE" if changed else "HEARTBEAT"
+                        try:
+                            reply = backend.report_state(session_id, state.value, event_type)
+                            if changed:
+                                reason = ", ".join(machine.reasons) or "all good"
+                                print(
+                                    f"{now - start:7.1f}s  {state.value:<10} ({reason})"
+                                    f"  -> backend: {reply.get('message', 'ok')}"
+                                )
+                            last_sent_state = state
+                            last_sent_at = now
+                        except BackendError as e:
+                            print(f"Could not send {state.value}: {e}")
+                            retry_at = now + RETRY_S
+
+                if window:
+                    sent = last_sent_state.value if last_sent_state else "nothing yet"
+                    show_frame(frame, status, color, sent, obs)
+
+                if now - last_check >= CHECK_SESSION_S:
+                    last_check = now
+                    if not session_still_active(backend, session_id):
+                        print("Session paused or ended. Camera off.")
+                        return
+        finally:
+            if window:
+                cv2.destroyAllWindows()
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Kaboom robot")
+    parser.add_argument(
+        "--window", action="store_true", help="show the live camera (needs the Pi desktop / VNC)"
+    )
+    args = parser.parse_args()
+
     cfg = load_config()
     if not cfg.api.robot_id:
         print("Set api.robot_id in config.yaml first (the robot's id from the robots table).")
@@ -116,9 +172,9 @@ def main() -> None:
     try:
         while True:
             session = wait_for_active_session(backend, cfg.api.poll_s)
-            watch_session(cfg, backend, session["id"])
+            watch_session(cfg, backend, session["id"], window=args.window)
             time.sleep(1)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, QuitRequested):
         print("\nStopped.")
 
 
