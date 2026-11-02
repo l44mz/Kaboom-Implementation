@@ -1,9 +1,11 @@
+
 package com.example.kaboom.entities;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -36,10 +38,20 @@ public class Purchase {
     @Column(name = "is_equipped")
     private boolean isEquipped = false;
 
+    // Store the number of items purchased.
+    @Column(name = "quantity", nullable = false)
+    private int quantity = 1;
+
+    // Store the total cost of the purchase.
+    @Column(name = "total_price", nullable = false)
+    private int totalPrice;
+
     public Purchase(User user, Product product, int pricePaid) {
         this.user = user;
         this.product = product;
         this.pricePaid = pricePaid;
         this.purchasedAt = LocalDateTime.now();
+        this.quantity = 1;
+        this.totalPrice = pricePaid;
     }
 }

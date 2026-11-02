@@ -2,7 +2,11 @@
 package com.example.kaboom.controllers;
 
 import com.example.kaboom.dtos.UserDto;
+import com.example.kaboom.entities.Product;
 import com.example.kaboom.entities.User;
+import com.example.kaboom.mappers.UserMapper;
+import com.example.kaboom.repositories.UserRepository;
+import com.example.kaboom.services.PurchaseService;
 import com.example.kaboom.services.UserServices;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -10,22 +14,51 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.UUID;
 
-/**
- * Handles user profile retrieval, updates, and account deletion.
- * Business logic is delegated to UserServices.
- */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/users")
-@Tag(name = "Users", description = "Retrieve, update, and delete user accounts.")
+@Tag(name = "Users", description = "Retrieve and manage user accounts.")
 public class UserController {
 
     private final UserServices userServices;
+    private final PurchaseService purchaseService;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+
+    /**
+     * Retrieves the authenticated user's profile.
+     */
+    @Operation(
+            summary = "Get my profile",
+            description = "Returns the authenticated user's ID, name, email, coins, and role."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User profile retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getMyProfile() {
+        String email = getAuthenticatedEmail();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
+        return ResponseEntity.ok(userMapper.toDto(user));
+    }
 
     /**
      * Retrieves a user's profile by UUID.
@@ -44,12 +77,11 @@ public class UserController {
     }
 
     /**
-     * Updates the specified user's profile.
-     * The service method will be aligned with the existing implementation later.
+     * Updates the authenticated user's profile.
      */
     @Operation(
-            summary = "Update user profile",
-            description = "Updates the user's account information."
+            summary = "Update my profile",
+            description = "Updates the authenticated user's name and email."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
@@ -59,29 +91,78 @@ public class UserController {
     })
     @PutMapping("/me")
     public ResponseEntity<UserDto> updateMyProfile(
-            @RequestParam UUID userId,
             @Valid @RequestBody UserDto userDto) {
 
-        // TODO: Replace the supplied userId with the authenticated user's ID.
-        return ResponseEntity.ok(userServices.updateUser(userId, userDto));
+        String email = getAuthenticatedEmail();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
+        return ResponseEntity.ok(
+                userServices.updateUser(user.getId(), userDto)
+        );
     }
 
     /**
-     * Deletes the specified user's account.
+     * Retrieves the products owned by the authenticated user.
      */
     @Operation(
-            summary = "Delete user account",
-            description = "Deletes the user's account and its associated data."
+            summary = "Get user's owned items",
+            description = "Returns the products purchased by the authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Owned items retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required")
+    })
+    @GetMapping("/me/items")
+    public ResponseEntity<List<Product>> getMyItems() {
+        return ResponseEntity.ok(
+                purchaseService.getUserItems(getAuthenticatedEmail())
+        );
+    }
+
+    /**
+     * Deletes the authenticated user's account.
+     */
+    @Operation(
+            summary = "Delete my account",
+            description = "Deletes the authenticated user's account."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Account deleted successfully"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @DeleteMapping("/me")
-    public ResponseEntity<Void> deleteMyAccount(@RequestParam UUID userId) {
+    public ResponseEntity<Void> deleteMyAccount() {
+        String email = getAuthenticatedEmail();
 
-        // TODO: Replace the supplied userId with the authenticated user's ID.
-        userServices.deleteUser(userId);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
+        userServices.deleteUser(user.getId());
+
         return ResponseEntity.ok().build();
+    }
+
+    private String getAuthenticatedEmail() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication required"
+            );
+        }
+
+        return authentication.getName();
     }
 }
