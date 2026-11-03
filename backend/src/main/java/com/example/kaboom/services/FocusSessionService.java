@@ -1,4 +1,3 @@
-
 package com.example.kaboom.services;
 
 import com.example.kaboom.dtos.CreateSessionRequest;
@@ -20,34 +19,31 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * Manages focus session lifecycle, timing, and rewards.
- */
 @Service
 public class FocusSessionService {
-
-    private static final int MAX_REWARD = 30;
 
     private final FocusSessionRepository focusSessionRepository;
     private final UserRepository userRepository;
     private final RobotRepository robotRepository;
+    private final StateLogService stateLogService;
 
     public FocusSessionService(
             FocusSessionRepository focusSessionRepository,
             UserRepository userRepository,
-            RobotRepository robotRepository) {
+            RobotRepository robotRepository,
+            StateLogService stateLogService
+    ) {
         this.focusSessionRepository = focusSessionRepository;
         this.userRepository = userRepository;
         this.robotRepository = robotRepository;
+        this.stateLogService = stateLogService;
     }
 
     /**
      * Starts a new focus session for a user.
      */
     @Transactional
-    public SessionResponse startSession(
-            UUID userId,
-            CreateSessionRequest request) {
+    public SessionResponse startSession(UUID userId, CreateSessionRequest request) {
 
         focusSessionRepository.findActiveOrPausedSessionByUserId(userId)
                 .ifPresent(session -> {
@@ -86,7 +82,7 @@ public class FocusSessionService {
     }
 
     /**
-     * Pauses an active session and records the pause start time.
+     * Pauses an active session and closes its current robot state log.
      */
     @Transactional
     public SessionResponse pauseSession(UUID userId, UUID sessionId) {
@@ -98,6 +94,8 @@ public class FocusSessionService {
                     "Only an active session can be paused");
         }
 
+        stateLogService.closeCurrentState(sessionId);
+
         session.setPauseStartedAt(LocalDateTime.now());
         session.setStatus(FocusSession.SessionStatus.paused);
 
@@ -105,7 +103,8 @@ public class FocusSessionService {
     }
 
     /**
-     * Resumes a paused session and accumulates its pause duration.
+     * Resumes a paused session.
+     * The next robot state must be recorded when it arrives.
      */
     @Transactional
     public SessionResponse resumeSession(UUID userId, UUID sessionId) {
@@ -136,23 +135,33 @@ public class FocusSessionService {
     }
 
     /**
-     * Ends an active or paused session and updates the user's coin balance.
-     *
-     * Focus time must be populated from recorded state intervals.
+     * Ends a session, closes its last state log,
+     * calculates actual focused time, and awards coins exactly once.
      */
     @Transactional
     public EndSessionResponse endSession(UUID userId, UUID sessionId) {
-        FocusSession session = getOwnedSession(userId, sessionId);
+
+        FocusSession session = focusSessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Session not found"));
+
+        if (session.getUser() == null
+                || !session.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Session not found");
+        }
 
         if (session.getStatus() == FocusSession.SessionStatus.completed) {
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Session is already completed");
+                    HttpStatus.CONFLICT, "Session is already completed");
         }
 
         LocalDateTime now = LocalDateTime.now();
 
-        // Include the current pause if the session is still paused.
+        // Close the current robot state before calculating focus time.
+        stateLogService.closeCurrentState(sessionId);
+
+        // Include the current pause duration if the session is still paused.
         if (session.getStatus() == FocusSession.SessionStatus.paused
                 && session.getPauseStartedAt() != null) {
 
@@ -172,14 +181,14 @@ public class FocusSessionService {
 
         session.setDurationSeconds(totalDuration);
 
+        // Active duration excludes paused time.
         int activeDuration = Math.max(
                 0, totalDuration - session.getPausedSeconds());
 
-        // Focus time must come from state logs.
-        // Until state logging is implemented, the stored value may be zero.
-        int focusedSeconds = Math.min(
+        // Only focused state logs count as actual focus.
+        int focusedSeconds = (int) Math.min(
                 activeDuration,
-                Math.max(0, session.getFocusedSeconds()));
+                stateLogService.calculateFocusedSeconds(sessionId));
 
         session.setFocusedSeconds(focusedSeconds);
 
@@ -189,16 +198,21 @@ public class FocusSessionService {
 
         session.setFocusedPercentage(focusedPercentage);
 
-        int reward = Math.min(MAX_REWARD, focusedSeconds / 60);
-        session.setRewardEarned(reward);
+        // One coin for every completed minute of active session time.
+        // Rewards are independent of focused/distracted/away states.
+        int reward = activeDuration / 60;
 
+        session.setRewardEarned(reward);
         session.setPauseStartedAt(null);
         session.setStatus(FocusSession.SessionStatus.completed);
 
         User user = session.getUser();
 
-        int updatedCoins = user.getCoins() + reward;
-        user.setCoins(updatedCoins);
+        if (reward > 0) {
+            user.addReward(reward);
+        }
+
+        int updatedCoins = user.getCoins();
 
         focusSessionRepository.save(session);
         userRepository.save(user);

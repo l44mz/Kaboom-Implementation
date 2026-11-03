@@ -1,5 +1,3 @@
-
-
 package com.example.kaboom.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,9 +19,9 @@ public class CreateSessionRequest {
     private UUID robotId;
 
     @NotNull(message = "Planned duration is required")
-    @Min(value = 600, message = "Planned duration must be at least 60 seconds")
+    @Min(value = 600, message = "Planned duration must be at least 10 minutes (600 seconds)")
     @Schema(
-            description = "Planned session duration in seconds",
+            description = "Planned session duration in seconds. Minimum: 600 seconds (10 minutes)",
             example = "1800",
             requiredMode = Schema.RequiredMode.REQUIRED
     )
