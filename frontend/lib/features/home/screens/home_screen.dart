@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -7,8 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/models/user.dart';
-import '../../../shared/services/user_service.dart';
+import '../../../shared/controllers/user_controller.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -27,11 +27,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // Durations the user can pick, in minutes. The backend's minimum is 10.
   static const _durations = [10, 15, 25, 45, 60];
 
-  final _api = ApiClient(TokenStorage());
-  late final _userService = UserService(_api);
-  late final _sessionService = SessionService(_api);
+  final _sessionService = SessionService(ApiClient(TokenStorage()));
 
-  User? _user;
   String? _error;
   bool _isLoading = true;
   bool _isStarting = false;
@@ -49,9 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
     try {
-      final user = await _userService.getMe();
-      if (!mounted) return;
-      setState(() => _user = user);
+      // Shared with the side menu on every screen, so the coins match everywhere.
+      await context.read<UserController>().load();
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = apiErrorMessage(e));
@@ -84,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.textPrimary,
       ),
-      drawer: AppDrawer(user: _user),
+      drawer: const AppDrawer(),
       body: SafeArea(child: _buildBody()),
     );
   }
