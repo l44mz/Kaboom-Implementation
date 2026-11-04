@@ -1,8 +1,9 @@
 package com.example.kaboom.dtos;
 
+import com.example.kaboom.entities.Robot;
 import com.example.kaboom.enums.FocusState;
 
 public record FocusStateResponse(
         String message,
-        FocusState robotExpression,
+        Robot.Expression robotExpression,
         long acceptedSequenceNumber) {}

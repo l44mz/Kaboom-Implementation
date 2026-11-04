@@ -1,6 +1,6 @@
 from kaboom_robot.api.robot_socket import RobotSocket
 from kaboom_robot.api.state_reporter import StateReporter
-from kaboom_robot import detect_state          # your CV function
+from kaboom_robot.vision import face_tracker
 
 def on_server_message(msg):
     if "error" in msg:

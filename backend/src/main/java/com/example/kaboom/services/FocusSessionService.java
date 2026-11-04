@@ -8,6 +8,7 @@ import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.entities.FocusSession;
 import com.example.kaboom.entities.Robot;
 import com.example.kaboom.entities.User;
+import com.example.kaboom.enums.FocusState;
 import com.example.kaboom.repositories.FocusSessionRepository;
 import com.example.kaboom.repositories.RobotRepository;
 import com.example.kaboom.repositories.UserRepository;
@@ -20,6 +21,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+
 
 /**
  * Manages focus session lifecycle, robot state reporting, timing, and rewards.
@@ -50,41 +53,39 @@ public class FocusSessionService {
      */
     @Transactional
     public SessionResponse startSession(
-            UUID userId,
+            UUID robotId,
             CreateSessionRequest request) {
 
-        focusSessionRepository.findActiveOrPausedSessionByUserId(userId)
+        Robot robot = robotRepository.findById(robotId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Robot not found"));
+
+        User user = robot.getUser();
+
+        if (user == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Robot is not paired with a user");
+        }
+
+        focusSessionRepository
+                .findActiveOrPausedSessionByUserId(user.getId())
                 .ifPresent(session -> {
                     throw new ResponseStatusException(
                             HttpStatus.CONFLICT,
                             "User already has an active or paused session");
                 });
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "User not found"));
-
-        Robot robot = null;
-
-        if (request.getRobotId() != null) {
-            robot = robotRepository.findById(request.getRobotId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND, "Robot not found"));
-
-            if (robot.getUser() == null
-                    || !robot.getUser().getId().equals(userId)) {
-                throw new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Robot not found");
-            }
-        }
-
         FocusSession session = new FocusSession(
-                user, robot, request.getPlannedDurationSeconds());
+                user,
+                robot,
+                request.getPlannedDurationSeconds());
 
         session.setStartTime(LocalDateTime.now());
         session.setStatus(FocusSession.SessionStatus.active);
 
-        FocusSession savedSession = focusSessionRepository.save(session);
+        FocusSession savedSession =
+                focusSessionRepository.save(session);
 
         return toSessionResponse(savedSession);
     }
@@ -245,6 +246,7 @@ public class FocusSessionService {
      * Records a state reported by the robot and returns the expression to display.
      * Events for non-active sessions and stale sequence numbers are ignored, not errors.
      */
+
     @Transactional
     public FocusStateResponse recordState(UUID robotId, FocusStateRequest request) {
         FocusSession session = focusSessionRepository
@@ -258,17 +260,19 @@ public class FocusSessionService {
                     HttpStatus.FORBIDDEN, "Robot does not own this session");
         }
 
+        // Paused or completed sessions ignore events; the robot sees this on its next poll.
         if (session.getStatus() != FocusSession.SessionStatus.active) {
             return new FocusStateResponse(
                     "Session is not active; event ignored",
-                    session.getCurrentState(),
+                    expressionFor(session.getCurrentState()),
                     session.getLastSequenceNumber());
         }
 
+        // Duplicate or out-of-order event.
         if (request.sequenceNumber() <= session.getLastSequenceNumber()) {
             return new FocusStateResponse(
                     "Stale event ignored",
-                    session.getCurrentState(),
+                    expressionFor(session.getCurrentState()),
                     session.getLastSequenceNumber());
         }
 
@@ -280,21 +284,26 @@ public class FocusSessionService {
         session.setLastEventAt(now);
         session.setLastSequenceNumber(request.sequenceNumber());
 
-
-        //saves the latest state on the robot so the app can read it
-        Robot.Expression expression = switch (request.state()) {
-            case FOCUSED -> Robot.Expression.smile;       // ADAPT to your real values
-            case DISTRACTED -> Robot.Expression.distressed;
-            case AWAY -> Robot.Expression.eyes_closed;
-        };
+        Robot.Expression expression = expressionFor(request.state());
         session.getRobot().setCurrentExpression(expression);
 
         focusSessionRepository.save(session);
 
         return new FocusStateResponse(
                 "State recorded",
-                request.state(),
+                expression,
                 request.sequenceNumber());
+    }
+
+    private Robot.Expression expressionFor(FocusState state) {
+        if (state == null) {
+            return Robot.Expression.smile;   // no state reported yet
+        }
+        return switch (state) {
+            case FOCUSED -> Robot.Expression.smile;
+            case DISTRACTED -> Robot.Expression.distressed;
+            case AWAY -> Robot.Expression.eyes_closed;
+        };
     }
 
     /**

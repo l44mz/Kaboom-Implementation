@@ -18,6 +18,10 @@ public class Robot {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    @Column(name = "serial_number", unique = true, length = 100 ,nullable = false)
+    private String serialNumber;
+
+
     @OneToOne
     @JoinColumn(name = "user_id", unique = true, nullable = false)
     private User user;

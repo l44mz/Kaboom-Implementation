@@ -1,67 +1,62 @@
 package com.example.kaboom.entities;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Setter
+@Getter
+@NoArgsConstructor
 
 @Entity
 @Table(name = "pairing_codes")
 public class PairingCode {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    @Column(name = "serial_number", nullable = false, length = 100)
+    private String serialNumber;
 
-    @Column(name = "code", nullable = false, unique = true, length = 50)
+    // 6 digits. Not unique: an expired code's value can be reused later.
+    @Column(name = "code", nullable = false, length = 6)
     private String code;
+
+    // the secret is never stored
+    @Column(name = "secret_hash", nullable = false, unique = true, length = 64)
+    private String secretHash;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
-    @Column(name = "is_used", nullable = false)
-    private Boolean isUsed = false;
 
-    public PairingCode() {}
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "claimed_by_user_id")
+    private User claimedByUser;
 
-    public Integer getId() {
-        return id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "robot_id")
+    private Robot robot;
+
+
+    @Column(name = "consumed", nullable = false)
+    private boolean consumed = false;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public Integer getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Integer userId) {
-        this.userId = userId;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public LocalDateTime getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(LocalDateTime expiresAt) {
-        this.expiresAt = expiresAt;
-    }
-
-    public Boolean getIsUsed() {
-        return isUsed;
-    }
-
-    public void setIsUsed(Boolean used) {
-        isUsed = used;
-    }
 }

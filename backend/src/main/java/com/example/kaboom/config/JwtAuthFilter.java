@@ -6,15 +6,18 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
 import java.io.IOException;
 import java.util.List;
 
 /**
- * Runs before every request. If it carries a valid access token,
- * marks the request as coming from the user whose email is in the token.
+ * Runs before every request. A valid user access token authenticates the user
+ * (principal = email, ROLE_USER). A valid device access token authenticates a
+ * robot (principal = robot id, ROLE_DEVICE).
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -33,9 +36,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
+
             if (jwtServices.isValidAccessToken(token)) {
                 String email = jwtServices.extractEmail(token);
-                var auth = new UsernamePasswordAuthenticationToken(email, null, List.of());
+                var auth = new UsernamePasswordAuthenticationToken(
+                        email, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+            } else if (jwtServices.isValidDeviceAccessToken(token)) {
+                String robotId = jwtServices.extractRobotId(token).toString();
+                var auth = new UsernamePasswordAuthenticationToken(
+                        robotId, null, List.of(new SimpleGrantedAuthority("ROLE_DEVICE")));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

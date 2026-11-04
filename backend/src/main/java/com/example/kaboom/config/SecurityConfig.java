@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/error").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/v1/robots/pairing-codes",
+                                "/api/v1/robots/pairing-status").permitAll()
                         .requestMatchers("/ws/**").permitAll()   // TEMPORARY, replace with device-token check
                         .anyRequest().authenticated())
                 // No browser username/password popup; send a clean 401 instead.

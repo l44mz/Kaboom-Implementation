@@ -25,11 +25,11 @@ public class FocusSessionController {
 
     @PostMapping("/start")
     public ResponseEntity<SessionResponse> startSession(
-            @RequestParam UUID robotID,
-            @RequestParam int DurationSeconds,
             @Valid @RequestBody CreateSessionRequest request) {
-        SessionResponse response = focusSessionService.startSession(robotID, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        return ResponseEntity.ok(
+                focusSessionService.startSession(
+                        request.getRobotId(), request));
     }
 
     @PutMapping("/{sessionId}/pause")

@@ -2,6 +2,8 @@
 package com.example.kaboom.controllers;
 
 import com.example.kaboom.dtos.*;
+import com.example.kaboom.services.JwtServices;
+import com.example.kaboom.services.RobotPairingService;
 import com.example.kaboom.services.UserServices;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -31,9 +33,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final UserServices userServices;
+    private final JwtServices jwtServices;
+    private final RobotPairingService  robotPairingService;
 
-    public AuthController(UserServices userServices) {
+    public AuthController(UserServices userServices, JwtServices jwtServices, RobotPairingService robotPairingService) {
         this.userServices = userServices;
+        this.jwtServices = jwtServices;
+        this.robotPairingService = robotPairingService;
     }
 
     /**
@@ -95,7 +101,11 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<RefreshResponseDto> refresh(
             @Valid @RequestBody RefreshDto dto) {
+        String token = dto.getRefreshToken();
 
+        if (jwtServices.isValidDeviceRefreshToken(token)) {
+            return ResponseEntity.ok(robotPairingService.refreshDevice(token));
+        }
         return ResponseEntity.ok(userServices.refresh(dto));
     }
 

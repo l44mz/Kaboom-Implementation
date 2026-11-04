@@ -3,14 +3,14 @@ package com.example.kaboom.websocket;
 import com.example.kaboom.dtos.FocusStateRequest;
 import com.example.kaboom.dtos.FocusStateResponse;
 import com.example.kaboom.services.FocusSessionService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Validator;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.Map;
@@ -53,7 +53,7 @@ public class RobotWebSocketHandler extends TextWebSocketHandler {
 
         } catch (ResponseStatusException e) {
             reply(ws, Map.of("error", e.getReason() == null ? "Error" : e.getReason()));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             reply(ws, Map.of("error", "Malformed JSON"));
         } catch (Exception e) {
             reply(ws, Map.of("error", "Server error"));
