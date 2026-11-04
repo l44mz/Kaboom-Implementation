@@ -3,12 +3,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/controllers/user_controller.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/robot_face.dart';
 import '../models/focus_session.dart';
@@ -159,7 +161,10 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       debugPrint('Could not end the session on the backend: $e');
     }
 
-    if (mounted) context.go(AppRoutes.sessionComplete, extra: result);
+    if (!mounted) return;
+    // The backend added the coins when the session ended, so reload them for the side menu.
+    context.read<UserController?>()?.refresh();
+    context.go(AppRoutes.sessionComplete, extra: result);
   }
 
   @override
