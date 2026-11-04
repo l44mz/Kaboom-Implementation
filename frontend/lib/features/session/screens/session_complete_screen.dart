@@ -49,7 +49,7 @@ class SessionCompleteScreen extends StatelessWidget {
                   const Text(
                     'Good Job!',
                     style: TextStyle(
-                      fontSize: 34,
+                      fontSize: 22,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
@@ -140,7 +140,7 @@ class _SummaryCard extends StatelessWidget {
           Text(
             result?.timeFocusedLabel ?? '--',
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
@@ -195,7 +195,7 @@ class _Coin extends StatelessWidget {
       child: Text(
         amount?.toString() ?? '--',
         style: AppTheme.numberStyle.copyWith(
-          fontSize: 28,
+          fontSize: 22,
           color: const Color(0xFF2A2A2A),
         ),
       ),

@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Text(
             'Ready to Focus?',
             style: TextStyle(
-              fontSize: 32,
+              fontSize: 22,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
