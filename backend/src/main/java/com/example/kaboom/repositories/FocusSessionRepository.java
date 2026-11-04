@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,4 +35,12 @@ public interface FocusSessionRepository extends JpaRepository<FocusSession, UUID
     // The robot's newest session with one of the given statuses (used by the robot's polling).
     Optional<FocusSession> findFirstByRobot_IdAndStatusInOrderByStartTimeDesc(
             UUID robotId, Collection<FocusSession.SessionStatus> statuses);
+
+    // The user's sessions with this status that started on or after "from", newest first (History).
+    List<FocusSession> findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
+            UUID userId, FocusSession.SessionStatus status, LocalDateTime from);
+
+    // All the user's sessions with this status, newest first (History "All time").
+    List<FocusSession> findByUser_IdAndStatusOrderByStartTimeDesc(
+            UUID userId, FocusSession.SessionStatus status);
 }

@@ -1,9 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kaboom_app/core/network/api_client.dart';
+import 'package:kaboom_app/core/storage/token_storage.dart';
 import 'package:kaboom_app/features/session/models/focus_session.dart';
 import 'package:kaboom_app/features/session/models/focus_state.dart';
 import 'package:kaboom_app/features/session/models/session_clock.dart';
 import 'package:kaboom_app/features/session/screens/focus_session_screen.dart';
+import 'package:kaboom_app/features/session/services/session_service.dart';
+
+/// A SessionService that never calls the network, so taps on Pause / End
+/// don't start real HTTP requests (and their timers) inside the tests.
+class FakeSessionService extends SessionService {
+  FakeSessionService() : super(ApiClient(TokenStorage()));
+
+  int pauseCalls = 0;
+  int resumeCalls = 0;
+  int endCalls = 0;
+
+  @override
+  Future<void> pauseSession(String sessionId) async {
+    pauseCalls++;
+  }
+
+  @override
+  Future<void> resumeSession(String sessionId) async {
+    resumeCalls++;
+  }
+
+  @override
+  Future<int> endSession(String sessionId) async {
+    endCalls++;
+    return 0;
+  }
+}
 
 void main() {
   final start = DateTime(2026, 10, 28, 14);
@@ -57,10 +86,12 @@ void main() {
       startTime: DateTime.now(),
       status: 'active',
     );
+    final service = FakeSessionService();
     await tester.pumpWidget(MaterialApp(
       home: FocusSessionScreen(
         session: session,
         states: Stream.value(FocusState.distracted),
+        service: service,
       ),
     ));
     await tester.pump();
@@ -73,6 +104,8 @@ void main() {
     await tester.tap(find.byTooltip('Pause'));
     await tester.pump();
     expect(find.text('Session paused'), findsOneWidget);
+    // Pausing also tells the backend.
+    expect(service.pauseCalls, 1);
 
     // Remove the screen so its 1 second timer stops before the test ends.
     await tester.pumpWidget(const SizedBox());
@@ -92,6 +125,7 @@ void main() {
           status: 'active',
         ),
         states: Stream.value(FocusState.distracted),
+        service: FakeSessionService(),
       ),
     ));
     await tester.pump();

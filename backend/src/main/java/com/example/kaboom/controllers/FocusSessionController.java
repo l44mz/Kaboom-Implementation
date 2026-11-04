@@ -2,6 +2,7 @@ package com.example.kaboom.controllers;
 
 import com.example.kaboom.dtos.CreateSessionRequest;
 import com.example.kaboom.dtos.EndSessionResponse;
+import com.example.kaboom.dtos.HistoryResponse;
 import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.services.FocusSessionService;
 import com.example.kaboom.services.UserServices;
@@ -36,6 +37,15 @@ public class FocusSessionController {
         SessionResponse response =
                 focusSessionService.startSession(currentUserId(authentication), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /** History screen: totals, chart and finished sessions. range = day, week, month or all. */
+    @GetMapping("/history")
+    public ResponseEntity<HistoryResponse> getHistory(
+            Authentication authentication,
+            @RequestParam(defaultValue = "week") String range) {
+        return ResponseEntity.ok(
+                focusSessionService.getHistory(currentUserId(authentication), range));
     }
 
     /** One of the user's sessions, with the robot's latest state (currentState). The app polls this. */

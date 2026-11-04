@@ -4,10 +4,12 @@ import com.example.kaboom.dtos.CreateSessionRequest;
 import com.example.kaboom.dtos.EndSessionResponse;
 import com.example.kaboom.dtos.FocusStateRequest;
 import com.example.kaboom.dtos.FocusStateResponse;
+import com.example.kaboom.dtos.HistoryResponse;
 import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.entities.FocusSession;
 import com.example.kaboom.entities.Robot;
 import com.example.kaboom.entities.User;
+import com.example.kaboom.enums.FocusState;
 import com.example.kaboom.repositories.FocusSessionRepository;
 import com.example.kaboom.repositories.RobotRepository;
 import com.example.kaboom.repositories.UserRepository;
@@ -17,9 +19,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -250,8 +257,14 @@ public class FocusSessionService {
      * Returns the robot's current session (active or paused), if any.
      * The robot polls this every few seconds.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<SessionResponse> getActiveSessionForRobot(UUID robotId) {
+        // Remember that the robot is online, so the app can show "Connected".
+        robotRepository.findById(robotId).ifPresent(robot -> {
+            robot.setLastSeenAt(LocalDateTime.now());
+            robotRepository.save(robot);
+        });
+
         return focusSessionRepository
                 .findFirstByRobot_IdAndStatusInOrderByStartTimeDesc(
                         robotId,
@@ -295,6 +308,12 @@ public class FocusSessionService {
         LocalDateTime now = LocalDateTime.now();
         accrueTime(session, now);
 
+        // Count each time the user becomes distracted (shown in History).
+        if (request.state() == FocusState.DISTRACTED
+                && session.getCurrentState() != FocusState.DISTRACTED) {
+            session.setDistractionCount(session.getDistractionCount() + 1);
+        }
+
         session.setCurrentState(request.state());
         session.setLastEventAt(now);
         session.setLastSequenceNumber(request.sequenceNumber());
@@ -307,6 +326,7 @@ public class FocusSessionService {
         };
         session.getRobot().setCurrentExpression(expression);
         session.getRobot().setConnectionState(Robot.ConnectionState.connected);
+        session.getRobot().setLastSeenAt(now);
 
         focusSessionRepository.save(session);
 
@@ -315,6 +335,111 @@ public class FocusSessionService {
                 request.state(),
                 request.sequenceNumber());
     }
+
+    /**
+     * The History screen: totals, the "Focus minutes" chart and the finished sessions
+     * for one range. range is day (today), week (this Monday to Sunday),
+     * month (this month) or all (everything; the chart shows the last 6 months).
+     */
+    @Transactional(readOnly = true)
+    public HistoryResponse getHistory(UUID userId, String rangeParam) {
+        String range = rangeParam == null ? "week" : rangeParam.trim().toLowerCase(Locale.ROOT);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+
+        // 1. The chart's buckets (start inclusive, end exclusive) and where the list starts.
+        List<Bucket> buckets = new ArrayList<>();
+        LocalDateTime listFrom;
+
+        switch (range) {
+            case "day" -> {
+                LocalDateTime start = today.atStartOfDay();
+                String[] labels = {"12a", "4a", "8a", "12p", "4p", "8p"};
+                for (int i = 0; i < labels.length; i++) {
+                    buckets.add(new Bucket(labels[i], start.plusHours(4L * i), start.plusHours(4L * (i + 1))));
+                }
+                listFrom = start;
+            }
+            case "week" -> {
+                LocalDate monday = today.with(DayOfWeek.MONDAY);
+                String[] labels = {"M", "T", "W", "T", "F", "S", "S"};
+                for (int i = 0; i < 7; i++) {
+                    LocalDate day = monday.plusDays(i);
+                    buckets.add(new Bucket(labels[i], day.atStartOfDay(), day.plusDays(1).atStartOfDay()));
+                }
+                listFrom = monday.atStartOfDay();
+            }
+            case "month" -> {
+                LocalDate first = today.withDayOfMonth(1);
+                LocalDate nextMonth = first.plusMonths(1);
+                int week = 1;
+                for (LocalDate start = first; start.isBefore(nextMonth); start = start.plusDays(7)) {
+                    LocalDate end = start.plusDays(7).isAfter(nextMonth) ? nextMonth : start.plusDays(7);
+                    buckets.add(new Bucket("W" + week++, start.atStartOfDay(), end.atStartOfDay()));
+                }
+                listFrom = first.atStartOfDay();
+            }
+            case "all" -> {
+                LocalDate thisMonth = today.withDayOfMonth(1);
+                for (int i = 5; i >= 0; i--) {
+                    LocalDate month = thisMonth.minusMonths(i);
+                    String label = month.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
+                    buckets.add(new Bucket(label, month.atStartOfDay(), month.plusMonths(1).atStartOfDay()));
+                }
+                listFrom = null;
+            }
+            default -> throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "range must be day, week, month or all");
+        }
+
+        // 2. The finished sessions in the range, newest first.
+        List<FocusSession> sessions = listFrom == null
+                ? focusSessionRepository.findByUser_IdAndStatusOrderByStartTimeDesc(
+                        userId, FocusSession.SessionStatus.completed)
+                : focusSessionRepository.findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
+                        userId, FocusSession.SessionStatus.completed, listFrom);
+
+        // 3. Totals.
+        int totalFocusSeconds = 0;
+        float percentageSum = 0f;
+        for (FocusSession session : sessions) {
+            totalFocusSeconds += session.getFocusedSeconds();
+            percentageSum += session.getFocusedPercentage() == null ? 0f : session.getFocusedPercentage();
+        }
+        float avgFocus = sessions.isEmpty() ? 0f : percentageSum / sessions.size();
+
+        // 4. Chart bars: focused minutes of the sessions that started in each bucket.
+        List<HistoryResponse.Bar> bars = new ArrayList<>();
+        for (Bucket bucket : buckets) {
+            int seconds = 0;
+            for (FocusSession session : sessions) {
+                LocalDateTime start = session.getStartTime();
+                if (!start.isBefore(bucket.start()) && start.isBefore(bucket.end())) {
+                    seconds += session.getFocusedSeconds();
+                }
+            }
+            boolean current = !now.isBefore(bucket.start()) && now.isBefore(bucket.end());
+            bars.add(new HistoryResponse.Bar(bucket.label(), Math.round(seconds / 60f), current));
+        }
+
+        // 5. The list (at most 50 sessions).
+        List<HistoryResponse.PastSession> past = sessions.stream()
+                .limit(50)
+                .map(session -> new HistoryResponse.PastSession(
+                        session.getId(),
+                        session.getStartTime(),
+                        Math.max(0, session.getDurationSeconds() - session.getPausedSeconds()),
+                        session.getFocusedSeconds(),
+                        session.getFocusedPercentage() == null ? 0f : session.getFocusedPercentage(),
+                        session.getDistractionCount(),
+                        session.getRewardEarned()))
+                .toList();
+
+        return new HistoryResponse(range, totalFocusSeconds, sessions.size(), avgFocus, bars, past);
+    }
+
+    /** One part of the History chart, from start (inclusive) to end (exclusive). */
+    private record Bucket(String label, LocalDateTime start, LocalDateTime end) {}
 
     /**
      * Credits the time since the last report to the previous state.

@@ -2,10 +2,12 @@ package com.example.kaboom.controllers;
 
 import com.example.kaboom.dtos.FocusStateRequest;
 import com.example.kaboom.dtos.FocusStateResponse;
+import com.example.kaboom.dtos.RobotDto;
 import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.entities.Robot;
 import com.example.kaboom.services.FocusSessionService;
 import com.example.kaboom.services.RobotService;
+import com.example.kaboom.services.UserServices;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -35,10 +38,14 @@ public class RobotController {
 
     private final RobotService robotService;
     private final FocusSessionService focusSessionService;
+    private final UserServices userServices;
 
-    public RobotController(RobotService robotService, FocusSessionService focusSessionService) {
+    public RobotController(RobotService robotService,
+                           FocusSessionService focusSessionService,
+                           UserServices userServices) {
         this.robotService = robotService;
         this.focusSessionService = focusSessionService;
+        this.userServices = userServices;
     }
 
     /**
@@ -51,26 +58,17 @@ public class RobotController {
                     + "including its current expression and connection state."
     )
     @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Robot retrieved successfully",
-                    content = @Content(
-                            schema = @Schema(implementation = Robot.class)
-                    )
-            ),
+            @ApiResponse(responseCode = "200", description = "Robot retrieved successfully"),
             @ApiResponse(responseCode = "401", description = "Missing or invalid authentication"),
-            @ApiResponse(responseCode = "404", description = "No robot is associated with the user"),
-            @ApiResponse(responseCode = "500", description = "Unexpected server error")
+            @ApiResponse(responseCode = "404", description = "No robot is associated with the user")
     })
     @GetMapping("/me")
-    public ResponseEntity<Robot> getMyRobot(
-            @RequestParam UUID userId) {
+    public ResponseEntity<RobotDto> getMyRobot(Authentication authentication) {
+        UUID userId = userServices.getByEmail(authentication.getName()).getId();
 
-        // TODO: Replace userId with the authenticated user's ID from the security context.
-        // Do not trust a user ID supplied by the client for authorization.
-        throw new UnsupportedOperationException(
-                "Connect the authenticated user to RobotService before enabling this endpoint."
-        );
+        return robotService.getRobotForUser(userId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**

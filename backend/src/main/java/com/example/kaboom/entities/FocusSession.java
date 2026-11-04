@@ -81,6 +81,10 @@ public class FocusSession {
     @Column(name = "away_seconds", nullable = false)
     private int awaySeconds = 0;
 
+    /** How many times the robot saw the user become distracted (for History). */
+    @Column(name = "distraction_count", nullable = false)
+    private int distractionCount = 0;
+
     public enum SessionStatus {
         active,
         paused,

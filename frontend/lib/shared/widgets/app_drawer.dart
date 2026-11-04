@@ -25,47 +25,60 @@ class AppDrawer extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _DrawerHeader(user: user),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.play_arrow_outlined),
-                label: const Text('Start Session'),
-                style: FilledButton.styleFrom(
-                  alignment: Alignment.centerLeft,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // The menu items scroll if the window is short.
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.play_arrow_outlined),
+                      label: const Text('Start Session'),
+                      style: FilledButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const _SectionLabel('FOCUS'),
+                  const _MenuItem(
+                    icon: Icons.history,
+                    label: 'Session History',
+                    route: AppRoutes.history,
+                  ),
+                  const _SectionLabel('SPARKY'),
+                  const _MenuItem(
+                    icon: Icons.shopping_bag_outlined,
+                    label: 'Store',
+                    route: AppRoutes.shop,
+                  ),
+                  const _MenuItem(
+                    icon: Icons.bluetooth,
+                    label: 'Connect Robot',
+                    route: AppRoutes.robotPair,
+                  ),
+                  const _SectionLabel('ACCOUNT'),
+                  const _MenuItem(
+                    icon: Icons.person_outline,
+                    label: 'My Account',
+                    route: AppRoutes.account,
+                  ),
+                  if (user?.isAdmin ?? false) ...[
+                    const _SectionLabel('ADMIN'),
+                    const _MenuItem(
+                      icon: Icons.dashboard_outlined,
+                      label: 'Admin Dashboard',
+                      route: AppRoutes.admin,
+                    ),
+                  ],
+                ],
               ),
             ),
-            const _SectionLabel('FOCUS'),
-            const _MenuItem(
-              icon: Icons.history,
-              label: 'Session History',
-              route: AppRoutes.history,
-            ),
-            const _SectionLabel('SPARKY'),
-            const _MenuItem(
-              icon: Icons.shopping_bag_outlined,
-              label: 'Store',
-              route: AppRoutes.shop,
-            ),
-            const _MenuItem(
-              icon: Icons.bluetooth,
-              label: 'Connect Robot',
-              route: AppRoutes.robotPair,
-            ),
-            if (user?.isAdmin ?? false) ...[
-              const _SectionLabel('ADMIN'),
-              const _MenuItem(
-                icon: Icons.dashboard_outlined,
-                label: 'Admin Dashboard',
-                route: AppRoutes.admin,
-              ),
-            ],
-            const Spacer(),
             const Divider(color: AppColors.border),
             ListTile(
               leading: const Icon(Icons.logout, color: AppColors.textMuted),
