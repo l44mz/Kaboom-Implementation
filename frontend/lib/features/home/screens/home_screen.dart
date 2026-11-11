@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return ErrorView(message: _error!, onRetry: _loadUser);
     }
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
       child: Column(
         children: [
           const _RobotFace(),
@@ -145,7 +145,7 @@ class _RobotFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(28),

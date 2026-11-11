@@ -37,7 +37,7 @@ class SessionCompleteScreen extends StatelessWidget {
           ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
+              padding: const EdgeInsets.fromLTRB(32, 40, 32, 40),
               child: Column(
                 children: [
                   const RobotFace(
@@ -123,7 +123,7 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 353),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.field,
         borderRadius: BorderRadius.circular(16),

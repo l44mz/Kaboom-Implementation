@@ -26,7 +26,7 @@ class AppDrawer extends StatelessWidget {
           children: [
             _DrawerHeader(user: user),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: FilledButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.play_arrow_outlined),
@@ -68,6 +68,7 @@ class AppDrawer extends StatelessWidget {
             const Spacer(),
             const Divider(color: AppColors.border),
             ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 24),
               leading: const Icon(Icons.logout, color: AppColors.textMuted),
               title: const Text('Log out'),
               onTap: () => _logout(context),
@@ -98,7 +99,7 @@ class _DrawerHeader extends StatelessWidget {
     final coins = user?.coins;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
       child: Row(
         children: [
           const CircleAvatar(
@@ -152,7 +153,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 4),
       child: Text(
         text,
         style: const TextStyle(
@@ -181,6 +182,7 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       leading: Icon(icon, color: AppColors.textMuted),
       title: Text(label),
       trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),

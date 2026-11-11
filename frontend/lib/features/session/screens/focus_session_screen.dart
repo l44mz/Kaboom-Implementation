@@ -153,7 +153,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     final clock = _clock!;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
       child: Column(
         children: [
           RobotFace(expression: _expressionFor(_state)),
