@@ -49,7 +49,7 @@ class SessionCompleteScreen extends StatelessWidget {
                   const Text(
                     'Good Job!',
                     style: TextStyle(
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
@@ -59,7 +59,7 @@ class SessionCompleteScreen extends StatelessWidget {
                     result != null && result.endedEarly
                         ? 'Session ended early'
                         : 'Focus Session Summary',
-                    style: const TextStyle(fontSize: 15, color: AppColors.textMuted),
+                    style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
                   ),
                   const SizedBox(height: 18),
                   _SummaryCard(result: result),
@@ -78,7 +78,7 @@ class SessionCompleteScreen extends StatelessWidget {
                       ),
                       child: const Text(
                         'Shop',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -97,7 +97,7 @@ class SessionCompleteScreen extends StatelessWidget {
                       ),
                       child: const Text(
                         'Back Home',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -134,13 +134,13 @@ class _SummaryCard extends StatelessWidget {
         children: [
           const Text(
             'Time Focused',
-            style: TextStyle(fontSize: 18, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 16, color: AppColors.textMuted),
           ),
           const SizedBox(height: 2),
           Text(
             result?.timeFocusedLabel ?? '--',
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
@@ -157,7 +157,7 @@ class _SummaryCard extends StatelessWidget {
             child: Text(
               'Coins Earned',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
@@ -195,7 +195,7 @@ class _Coin extends StatelessWidget {
       child: Text(
         amount?.toString() ?? '--',
         style: AppTheme.numberStyle.copyWith(
-          fontSize: 22,
+          fontSize: 20,
           color: const Color(0xFF2A2A2A),
         ),
       ),

@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Text(
             'Ready to Focus?',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
@@ -194,7 +194,7 @@ class _DurationRing extends StatelessWidget {
                 'Sparky is waiting\nfor you',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),

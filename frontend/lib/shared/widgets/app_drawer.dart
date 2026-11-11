@@ -115,7 +115,7 @@ class _DrawerHeader extends StatelessWidget {
                   'Hi $name!',
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
@@ -128,7 +128,7 @@ class _DrawerHeader extends StatelessWidget {
                     Text(
                       coins == null ? '-- coins' : '$coins coins',
                       style: AppTheme.numberStyle.copyWith(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: AppColors.coin,
                       ),
                     ),
@@ -156,7 +156,7 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           letterSpacing: 1,
           color: AppColors.textMuted,
