@@ -51,6 +51,12 @@ public class SessionResponse {
     )
     private String currentState;
 
+    @Schema(
+            description = "Whether Sparky has exploded during this session",
+            example = "false"
+    )
+    private boolean explosionTriggered = false;
+
     public SessionResponse() {
     }
 
@@ -60,7 +66,7 @@ public class SessionResponse {
             Integer plannedDurationSeconds,
             LocalDateTime startTime,
             String status) {
-        this(id, robotId, plannedDurationSeconds, startTime, status, null);
+        this(id, robotId, plannedDurationSeconds, startTime, status, null, false);
     }
 
     public SessionResponse(
@@ -70,12 +76,24 @@ public class SessionResponse {
             LocalDateTime startTime,
             String status,
             String currentState) {
+        this(id, robotId, plannedDurationSeconds, startTime, status, currentState, false);
+    }
+
+    public SessionResponse(
+            UUID id,
+            UUID robotId,
+            Integer plannedDurationSeconds,
+            LocalDateTime startTime,
+            String status,
+            String currentState,
+            boolean explosionTriggered) {
         this.id = id;
         this.robotId = robotId;
         this.plannedDurationSeconds = plannedDurationSeconds;
         this.startTime = startTime;
         this.status = status;
         this.currentState = currentState;
+        this.explosionTriggered = explosionTriggered;
     }
 
     public UUID getId() {
@@ -124,5 +142,13 @@ public class SessionResponse {
 
     public void setCurrentState(String currentState) {
         this.currentState = currentState;
+    }
+
+    public boolean isExplosionTriggered() {
+        return explosionTriggered;
+    }
+
+    public void setExplosionTriggered(boolean explosionTriggered) {
+        this.explosionTriggered = explosionTriggered;
     }
 }

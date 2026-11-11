@@ -1,6 +1,6 @@
 """Runs Sparky's animated face on the screen in a background thread.
 
-Other code just sets `face.expression` ("focused", "distracted", "away" or "happy");
+Other code sets `face.expression` ("focused", "distracted", "away", "happy" or "exploded");
 the thread keeps drawing and sending frames, so the face stays alive (blinking,
 looking around) even while the camera or the network is busy.
 """

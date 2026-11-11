@@ -85,6 +85,14 @@ public class FocusSession {
     @Column(name = "distraction_count", nullable = false)
     private int distractionCount = 0;
 
+    /** How many times the user entered the AWAY state during this session. */
+    @Column(name = "away_count", nullable = false)
+    private int awayCount = 0;
+
+    /** Whether Sparky has exploded during this session. */
+    @Column(name = "explosion_triggered", nullable = false)
+    private boolean explosionTriggered = false;
+
     public enum SessionStatus {
         active,
         paused,
