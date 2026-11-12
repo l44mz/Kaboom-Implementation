@@ -5,6 +5,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/app_lottie.dart';
 import '../../../shared/widgets/robot_face.dart';
 import '../models/session_result.dart';
 
@@ -105,6 +106,16 @@ class SessionCompleteScreen extends StatelessWidget {
               ),
             ),
           ),
+          // Confetti bursts once over the top of the screen. IgnorePointer lets taps through.
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 420,
+            child: IgnorePointer(
+              child: AppLottie(AppAnimation.confetti, repeat: false),
+            ),
+          ),
         ],
       ),
     );
@@ -151,7 +162,32 @@ class _SummaryCard extends StatelessWidget {
             child: Divider(height: 1, color: Color(0xFF3847A6)),
           ),
           const SizedBox(height: 14),
-          Center(child: _Coin(amount: result?.coinsEarned)),
+          // Gold rings and stars shine once behind the coin.
+          Center(
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                const SizedBox(
+                  width: 73,
+                  height: 73,
+                  child: OverflowBox(
+                    maxWidth: 160,
+                    maxHeight: 160,
+                    child: IgnorePointer(
+                      child: AppLottie(
+                        AppAnimation.coinShine,
+                        width: 160,
+                        height: 160,
+                        repeat: false,
+                      ),
+                    ),
+                  ),
+                ),
+                _Coin(amount: result?.coinsEarned),
+              ],
+            ),
+          ),
           const SizedBox(height: 6),
           const Center(
             child: Text(
