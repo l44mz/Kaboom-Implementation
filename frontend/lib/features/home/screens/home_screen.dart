@@ -163,27 +163,35 @@ class _DurationRing extends StatelessWidget {
               color: AppColors.secondary,
             ),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$minutes:00',
-                style: AppTheme.timerStyle.copyWith(
-                  fontSize: 64,
-                  color: AppColors.textPrimary,
-                ),
+          // Keep the text inside the ring: 40 from each edge clears the 18 px band,
+          // and FittedBox shrinks the text if it would still be too wide.
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$minutes:00',
+                    style: AppTheme.timerStyle.copyWith(
+                      fontSize: 56,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Sparky is waiting\nfor you',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Sparky is waiting\nfor you',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
