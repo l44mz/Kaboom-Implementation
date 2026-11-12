@@ -222,7 +222,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     final clock = _clock!;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
       child: Column(
         children: [
           RobotFace(expression: _expressionFor(_state)),
@@ -274,7 +274,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
               ),
               child: const Text(
                 'End Session',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -324,7 +324,7 @@ class _StatusChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             state.label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -400,7 +400,7 @@ class _TimerRing extends StatelessWidget {
                 message,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),

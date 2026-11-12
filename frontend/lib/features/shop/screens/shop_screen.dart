@@ -11,6 +11,7 @@ import '../../../shared/widgets/page_header.dart';
 import '../controllers/shop_controller.dart';
 import '../models/shop_item.dart';
 import '../widgets/buy_item_dialog.dart';
+import '../widgets/purchase_celebration.dart';
 import '../widgets/shop_item_card.dart';
 
 /// The Shop (Figma "Shop" and "Buy Confirmation").
@@ -63,10 +64,14 @@ class _ShopScreenState extends State<ShopScreen> {
 
     final error = await _controller.buy(item);
     if (!mounted) return;
-    showAppSnackBar(
+    if (error != null) {
+      showAppSnackBar(context, error, isError: true);
+      return;
+    }
+    await showPurchaseCelebration(
       context,
-      error ?? 'You bought ${item.name}!',
-      isError: error != null,
+      item: item,
+      image: _controller.images[item.id],
     );
   }
 

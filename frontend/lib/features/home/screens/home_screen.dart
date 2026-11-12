@@ -14,6 +14,7 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/robot_face.dart';
 import '../../session/services/session_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -96,12 +97,12 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
       child: Column(
         children: [
-          const _RobotFace(),
+          const RobotFace(expression: RobotExpression.ready, glow: true),
           const SizedBox(height: 24),
           const Text(
             'Ready to Focus?',
             style: TextStyle(
-              fontSize: 32,
+              fontSize: 20,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
@@ -138,23 +139,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// The robot's face in a rounded card.
-class _RobotFace extends StatelessWidget {
-  const _RobotFace();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Image.asset('assets/images/Robot.png', height: 140),
-    );
-  }
-}
-
 /// The ring with the chosen time in the middle.
 class _DurationRing extends StatelessWidget {
   const _DurationRing({required this.minutes});
@@ -179,27 +163,35 @@ class _DurationRing extends StatelessWidget {
               color: AppColors.secondary,
             ),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$minutes:00',
-                style: AppTheme.timerStyle.copyWith(
-                  fontSize: 64,
-                  color: AppColors.textPrimary,
-                ),
+          // Keep the text inside the ring: 40 from each edge clears the 18 px band,
+          // and FittedBox shrinks the text if it would still be too wide.
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$minutes:00',
+                    style: AppTheme.timerStyle.copyWith(
+                      fontSize: 56,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Sparky is waiting\nfor you',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Sparky is waiting\nfor you',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
