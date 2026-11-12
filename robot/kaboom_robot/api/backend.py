@@ -1,4 +1,4 @@
-"""Talks to the Kaboom backend over HTTP (standard library only, nothing to install).
+"""Talks to the Kaboom backend over HTTP.
 
 The robot makes two calls:
     GET  /robots/me/active-session?robotId=...   -> the session to watch, or 204 when there is none

@@ -14,7 +14,7 @@ import '../widgets/change_password_dialog.dart';
 import '../widgets/edit_profile_dialog.dart';
 import '../widgets/settings_group.dart';
 
-/// My Account (Figma "My Account").
+
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -83,7 +83,7 @@ class _AccountScreenState extends State<AccountScreen> {
     context.go(AppRoutes.login);
   }
 
-  /// 64800 → "18h", 2700 → "45m", null → "–"
+ 
   static String _focusHours(int? seconds) {
     if (seconds == null) return '–';
     if (seconds < 3600) return '${seconds ~/ 60}m';

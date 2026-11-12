@@ -4,7 +4,7 @@ import '../../../core/network/api_client.dart';
 import '../../../shared/models/user.dart';
 import '../models/robot_info.dart';
 
-/// HTTP calls for My Account. No UI and no state here.
+
 class AccountService {
   AccountService(this._api);
 

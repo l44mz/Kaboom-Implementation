@@ -37,6 +37,10 @@ class SessionClock {
       plannedSeconds == 0 ? 0 : remainingSeconds(now) / plannedSeconds;
 
   bool isFinished(DateTime now) => remainingSeconds(now) == 0;
+  
+    /// When the session will finish if it keeps running from [now].
+  /// It moves later after every pause, so call it again after a resume.
+  DateTime endTime(DateTime now) => now.add(Duration(seconds: remainingSeconds(now)));
 
   /// "mm:ss", for example 30:22. A 60 minute session starts at "60:00".
   static String format(int seconds) {

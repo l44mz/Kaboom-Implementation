@@ -8,10 +8,10 @@ class RobotInfo {
 
   final String id;
 
-  /// e.g. "FocusRobot - A4F2"
+  
   final String name;
 
-  /// True when the robot talked to the backend in the last 30 seconds.
+ 
   final bool connected;
 
   factory RobotInfo.fromJson(Map<String, dynamic> json) => RobotInfo(

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/notifications/session_notifications.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
@@ -55,6 +56,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
   // Seconds spent FOCUSED and not paused, for the summary.
   int _focusedSeconds = 0;
 
+  /// The phone notification with the timer (Android only, does nothing elsewhere).
+  final _notifications = SessionNotifications.instance;
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +70,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       plannedSeconds: session.plannedDurationSeconds,
     );
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+    unawaited(_startNotification());
     _stateSub = (widget.states ?? _service.focusStates(session.id)).listen((state) {
       if (!mounted) return;
       setState(() {
@@ -80,6 +85,16 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     _ticker?.cancel();
     _stateSub?.cancel();
     super.dispose();
+  }
+
+  /// The moment the session will end if it isn't paused again.
+  DateTime _endTime(DateTime now) =>
+      now.add(Duration(seconds: _clock!.remainingSeconds(now)));
+
+  Future<void> _startNotification() async {
+    await _notifications.askPermission();
+    if (!mounted || _finishing || _clock!.isPaused) return;
+    await _notifications.showRunning(_endTime(DateTime.now()));
   }
 
   void _tick() {
@@ -101,6 +116,10 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     // Update the screen right away, then tell the backend (which also tells the robot).
     setState(() => pausing ? _clock!.pause(now) : _clock!.resume(now));
     unawaited(_syncPause(pausing));
+    // Paused: the notification stops counting. Resumed: it counts to the new end time.
+    unawaited(pausing
+        ? _notifications.showPaused(_clock!.remainingSeconds(now))
+        : _notifications.showRunning(_endTime(now)));
   }
 
   Future<void> _syncPause(bool pausing) async {
@@ -143,6 +162,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     _finishing = true;
     _ticker?.cancel();
     _stateSub?.cancel();
+    unawaited(_notifications.sessionEnded(endedEarly: endedEarly));
 
     // The backend ends the session, stops the robot, and decides the coins.
     // If it can't be reached, fall back to the app's own count.

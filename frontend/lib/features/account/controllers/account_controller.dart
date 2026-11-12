@@ -29,7 +29,7 @@ class AccountController extends ChangeNotifier {
   User? get user => users.user;
   RobotInfo? robot;
 
-  /// All-time numbers for the three boxes.
+
   int? sessionCount;
   int? focusSeconds;
 
