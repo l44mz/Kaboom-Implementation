@@ -14,6 +14,7 @@ import '../../../shared/widgets/app_snackbar.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/robot_face.dart';
 import '../../session/services/session_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -96,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
       child: Column(
         children: [
-          const _RobotFace(),
+          const RobotFace(expression: RobotExpression.ready, glow: true),
           const SizedBox(height: 24),
           const Text(
             'Ready to Focus?',
@@ -134,23 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// The robot's face in a rounded card.
-class _RobotFace extends StatelessWidget {
-  const _RobotFace();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Image.asset('assets/images/Robot.png', height: 140),
     );
   }
 }

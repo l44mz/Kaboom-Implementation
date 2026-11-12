@@ -24,7 +24,13 @@ class AuthFooterLink extends StatelessWidget {
         TextButton(
           onPressed: onTap,
           child: Text(action,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.secondary,
+                decoration: TextDecoration.underline,
+                decorationColor: AppColors.secondary,
+              )),
         ),
       ],
     );
