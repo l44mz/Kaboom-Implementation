@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Sparky's expressions, from the Figma "Robot faces" component.
-enum RobotExpression { focused, distracted, away, happy }
+enum RobotExpression { focused, distracted, away, happy, ready }
 
 /// Sparky's face in its rounded card. Figma size is 272 x 188; [width] scales it.
 class RobotFace extends StatelessWidget {
@@ -114,6 +114,12 @@ class _FacePainter extends CustomPainter {
         _arc(canvas, const Offset(57, 70), 20, math.pi, eyes);
         _arc(canvas, const Offset(171, 70), 20, math.pi, eyes);
         _arc(canvas, const Offset(114, 80), 22, 0, _stroke(_mouth, 8));
+      case RobotExpression.ready:
+        // o o eyes (rings) and a small smile, waiting on Home.
+        final eyes = _stroke(AppColors.primary, 9);
+        canvas.drawCircle(const Offset(57, 68), 20, eyes);
+        canvas.drawCircle(const Offset(171, 68), 20, eyes);
+        _arc(canvas, const Offset(114, 92), 18, 0, _stroke(_mouth, 8));
     }
   }
 
