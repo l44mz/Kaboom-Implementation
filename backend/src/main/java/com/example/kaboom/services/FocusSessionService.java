@@ -294,24 +294,38 @@ public class FocusSessionService {
             return new FocusStateResponse(
                     "Session is not active; event ignored",
                     session.getCurrentState(),
-                    session.getLastSequenceNumber());
+                    session.getLastSequenceNumber(),
+                    session.isExplosionTriggered());
         }
 
         if (request.sequenceNumber() <= session.getLastSequenceNumber()) {
             return new FocusStateResponse(
                     "Stale event ignored",
                     session.getCurrentState(),
-                    session.getLastSequenceNumber());
+                    session.getLastSequenceNumber(),
+                    session.isExplosionTriggered());
         }
 
         // The server clock is used, so the robot's clock cannot change rewards.
         LocalDateTime now = LocalDateTime.now();
         accrueTime(session, now);
 
-        // Count each time the user becomes distracted (shown in History).
+        // Count only new transitions into DISTRACTED or AWAY.
         if (request.state() == FocusState.DISTRACTED
                 && session.getCurrentState() != FocusState.DISTRACTED) {
             session.setDistractionCount(session.getDistractionCount() + 1);
+        }
+
+        if (request.state() == FocusState.AWAY
+                && session.getCurrentState() != FocusState.AWAY) {
+            session.setAwayCount(session.getAwayCount() + 1);
+        }
+
+        // Trigger the explosion once and keep it active for the rest of the session.
+        if (!session.isExplosionTriggered()
+                && (session.getAwayCount() >= 2
+                || session.getDistractionCount() >= 4)) {
+            session.setExplosionTriggered(true);
         }
 
         session.setCurrentState(request.state());
@@ -333,7 +347,8 @@ public class FocusSessionService {
         return new FocusStateResponse(
                 "State recorded",
                 request.state(),
-                request.sequenceNumber());
+                request.sequenceNumber(),
+                session.isExplosionTriggered());
     }
 
     /**
@@ -491,7 +506,8 @@ public class FocusSessionService {
                 session.getPlannedDurationSeconds(),
                 session.getStartTime(),
                 session.getStatus().name(),
-                currentState
+                currentState,
+                session.isExplosionTriggered()
         );
     }
 }

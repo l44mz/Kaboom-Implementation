@@ -1,6 +1,7 @@
 package com.example.kaboom.entities;
 
 import com.example.kaboom.enums.FocusState;
+import com.example.kaboom.enums.SessionSource;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,6 +29,11 @@ public class FocusSession {
     @ManyToOne
     @JoinColumn(name = "robot_id")
     private Robot robot;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 20,
+            columnDefinition = "varchar(20) default 'ROBOT'")
+    private SessionSource source = SessionSource.ROBOT;
 
     @Column(name = "planned_duration_seconds", nullable = false)
     private int plannedDurationSeconds = 1800;
@@ -84,6 +90,14 @@ public class FocusSession {
     /** How many times the robot saw the user become distracted (for History). */
     @Column(name = "distraction_count", nullable = false)
     private int distractionCount = 0;
+
+    /** How many times the user entered the AWAY state during this session. */
+    @Column(name = "away_count", nullable = false)
+    private int awayCount = 0;
+
+    /** Whether Sparky has exploded during this session. */
+    @Column(name = "explosion_triggered", nullable = false)
+    private boolean explosionTriggered = false;
 
     public enum SessionStatus {
         active,

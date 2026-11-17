@@ -112,10 +112,12 @@ def watch_session(
     session_id: str,
     window: bool = False,
     face=None,
+    initial_explosion_triggered: bool = False,
 ) -> None:
     """Run the camera and report states until the session is paused or ended."""
     print(f"Session {session_id} is running. Look at your screen for a few seconds...")
-    set_face(face, "happy")  # greets you while it learns your normal pose
+    explosion_triggered = initial_explosion_triggered
+    set_face(face, "exploded" if explosion_triggered else "happy")
     baseline = Baseline(seconds=cfg.vision.calibration_s)
     machine = FocusStateMachine(cfg.vision.thresholds)
 
@@ -142,14 +144,22 @@ def watch_session(
                         print("Calibrated. Watching...")
                 else:
                     state = machine.update(now, baseline.apply(obs))
-                    status, color = state.value, COLORS[state]
-                    set_face(face, FACE_FOR_STATE[state])
+                    status = "EXPLODED" if explosion_triggered else state.value
+                    color = COLORS[state]
+
+                    if not explosion_triggered:
+                        set_face(face, FACE_FOR_STATE[state])
                     changed = state != last_sent_state
                     due = changed or now - last_sent_at >= HEARTBEAT_S
                     if due and now >= retry_at:
                         event_type = "STATE_CHANGE" if changed else "HEARTBEAT"
                         try:
                             reply = backend.report_state(session_id, state.value, event_type)
+
+                            if reply.get("explosionTriggered"):
+                                explosion_triggered = True
+                                status = "EXPLODED"
+                                set_face(face, "exploded")
                             if changed:
                                 reason = ", ".join(machine.reasons) or "all good"
                                 print(
@@ -207,7 +217,14 @@ def main() -> None:
         while True:
             set_face(face, "happy")  # waiting for a session
             session = wait_for_active_session(backend, cfg.api.poll_s)
-            watch_session(cfg, backend, session["id"], window=args.window, face=face)
+            watch_session(
+                cfg,
+                backend,
+                session["id"],
+                window=args.window,
+                face=face,
+                initial_explosion_triggered=bool(session.get("explosionTriggered", False)),
+            )
             time.sleep(1)
     except (KeyboardInterrupt, QuitRequested):
         print("\nStopped.")

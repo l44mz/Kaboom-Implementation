@@ -10,7 +10,7 @@ import random
 
 from PIL import Image, ImageDraw
 
-EXPRESSIONS = ("focused", "distracted", "away", "happy")
+EXPRESSIONS = ("focused", "distracted", "away", "happy", "exploded")
 
 BACKGROUND = (15, 16, 48)  # #0F1030, the app's robot screen
 EYE = (79, 107, 255)  # #4F6BFF, AppColors.primary
@@ -52,6 +52,44 @@ class FaceRenderer:
             self._bar(draw, 144, 64, 48, 14, EYE, eye_open, eye_shift)
             self._circle(draw, (114, 98), 16, MOUTH, mouth_shift)
             self._circle(draw, (114, 98), 5, BACKGROUND, mouth_shift)
+        elif expression == "exploded":
+            # Draw explosion rays around the face.
+            burst_points = [
+                ((114, 8), (114, 27)),
+                ((45, 20), (60, 39)),
+                ((183, 20), (168, 39)),
+                ((12, 75), (35, 75)),
+                ((216, 75), (193, 75)),
+                ((35, 132), (55, 115)),
+                ((193, 132), (173, 115)),
+                ((114, 142), (114, 124)),
+            ]
+            for start, end in burst_points:
+                draw.line(
+                    [self._p(*start), self._p(*end)],
+                    fill=MOUTH,
+                    width=max(2, round(5 * self.scale)),
+                )
+
+            # X-shaped eyes.
+            for cx in (57, 171):
+                x1, y1 = self._p(cx - 13, 52)
+                x2, y2 = self._p(cx + 13, 78)
+                x3, y3 = self._p(cx + 13, 52)
+                x4, y4 = self._p(cx - 13, 78)
+                width = max(3, round(9 * self.scale))
+                draw.line((x1, y1, x2, y2), fill=EYE, width=width)
+                draw.line((x3, y3, x4, y4), fill=EYE, width=width)
+
+            # Open mouth.
+            x0, y0 = self._p(96, 88)
+            x1, y1 = self._p(132, 128)
+            draw.ellipse(
+                (x0, y0, x1, y1),
+                fill=MOUTH,
+                outline=EYE,
+                width=max(2, round(3 * self.scale)),
+            )
         else:  # happy: ^ ^ and a smile
             for cx in (57, 171):
                 self._half_arc(draw, (cx, 70), 20, top=True, width=9, color=EYE,
