@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -23,20 +23,14 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  late final AccountController _controller;
+  // Get.put creates the controller and calls its onInit() (which loads the account).
+  final _controller = Get.put(AccountController(users: Get.find<UserController>()));
 
   static const _connectedColor = Color(0xFF38BDF8);
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AccountController(users: context.read<UserController>());
-    _controller.load();
-  }
-
-  @override
   void dispose() {
-    _controller.dispose();
+    Get.delete<AccountController>();
     super.dispose();
   }
 
@@ -83,7 +77,7 @@ class _AccountScreenState extends State<AccountScreen> {
     context.go(AppRoutes.login);
   }
 
- 
+  /// 64800 → "18h", 2700 → "45m", null → "–"
   static String _focusHours(int? seconds) {
     if (seconds == null) return '–';
     if (seconds < 3600) return '${seconds ~/ 60}m';
@@ -94,10 +88,8 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: ListenableBuilder(
-          // Rebuild when the account data or the shared user (name, coins) changes.
-          listenable: Listenable.merge([_controller, _controller.users]),
-          builder: (context, _) => RefreshIndicator(
+        child: Obx(
+          () => RefreshIndicator(
             onRefresh: _controller.load,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -122,21 +114,21 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget _buildContent() {
     final user = _controller.user;
 
-    if (_controller.isLoading && user == null) {
+    if (_controller.isLoading.value && user == null) {
       return const Padding(
         padding: EdgeInsets.only(top: 60),
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    if (_controller.errorMessage != null && user == null) {
+    if (_controller.errorMessage.value != null && user == null) {
       return SizedBox(
         height: 260,
-        child: ErrorView(message: _controller.errorMessage!, onRetry: _controller.load),
+        child: ErrorView(message: _controller.errorMessage.value!, onRetry: _controller.load),
       );
     }
     if (user == null) return const SizedBox.shrink();
 
-    final robot = _controller.robot;
+    final robot = _controller.robot.value;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -203,7 +195,7 @@ class _AccountScreenState extends State<AccountScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: StatBox(
-                value: _controller.sessionCount?.toString() ?? '–',
+                value: _controller.sessionCount.value?.toString() ?? '–',
                 label: 'Sessions',
                 centered: true,
               ),
@@ -211,7 +203,7 @@ class _AccountScreenState extends State<AccountScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: StatBox(
-                value: _focusHours(_controller.focusSeconds),
+                value: _focusHours(_controller.focusSeconds.value),
                 label: 'Focus hours',
                 valueColor: _connectedColor,
                 centered: true,
@@ -263,10 +255,10 @@ class _AccountScreenState extends State<AccountScreen> {
               icon: Icons.notifications_none,
               title: 'Notifications',
               trailing: Switch(
-                value: _controller.notificationsOn,
+                value: _controller.notificationsOn.value,
                 onChanged: _controller.setNotifications,
               ),
-              onTap: () => _controller.setNotifications(!_controller.notificationsOn),
+              onTap: () => _controller.setNotifications(!_controller.notificationsOn.value),
             ),
             SettingsRow(
               icon: Icons.language,

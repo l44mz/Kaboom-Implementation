@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/animated_robot_face.dart';
 
-/// Robot image + title + subtitle at the top of Sign Up and Login.
+/// Sparky's moving face + title + subtitle at the top of Sign Up and Login.
 class AuthHeader extends StatelessWidget {
   const AuthHeader({super.key, required this.title, required this.subtitle});
 
@@ -14,8 +15,13 @@ class AuthHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Image.asset('assets/images/Robot.png', height: 128),
-        const SizedBox(height: 24),
+        // 185 wide = 128 high, the same height as the old Robot.png.
+        // The padding leaves room for the glow and the float, so nothing is cut.
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Center(child: AnimatedRobotFace(width: 185)),
+        ),
+        const SizedBox(height: 16),
         Text(title,
             textAlign: TextAlign.center,
             style: const TextStyle(

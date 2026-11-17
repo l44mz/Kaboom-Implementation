@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
@@ -19,19 +20,21 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  final _controller = AdminController();
+  // Tag 'dashboard': the Add/Edit Product form opens ON TOP of this screen
+  // with its own AdminController (tag 'form'), so the two must not share one.
+  final _controller = Get.put(AdminController(), tag: 'dashboard');
 
   static const _robotColor = Color(0xFF5CC8F5);
 
   @override
   void initState() {
     super.initState();
-    _controller.loadAll();
+    _controller.loadAll(); // here, not in onInit(): the form doesn't need it
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    Get.delete<AdminController>(tag: 'dashboard');
     super.dispose();
   }
 
@@ -59,7 +62,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : '${product.name} is visible.',
       );
     } else {
-      showAppSnackBar(context, _controller.errorMessage!, isError: true);
+      showAppSnackBar(context, _controller.errorMessage.value ?? '', isError: true);
     }
   }
 
@@ -76,10 +79,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) {
-            final stats = _controller.stats;
+        // Obx with a block body: { ... return ...; } works like the old builder.
+        child: Obx(
+          () {
+            final stats = _controller.stats.value;
 
             return RefreshIndicator(
               onRefresh: _controller.loadAll,
@@ -181,17 +184,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 16),
 
                   // Product list (or loading / error / empty)
-                  if (_controller.isLoading && _controller.products.isEmpty)
+                  if (_controller.isLoading.value && _controller.products.isEmpty)
                     const Padding(
                       padding: EdgeInsets.only(top: 40),
                       child: Center(child: CircularProgressIndicator()),
                     )
-                  else if (_controller.errorMessage != null &&
+                  else if (_controller.errorMessage.value != null &&
                       _controller.products.isEmpty)
                     SizedBox(
                       height: 240,
                       child: ErrorView(
-                        message: _controller.errorMessage!,
+                        message: _controller.errorMessage.value!,
                         onRetry: _controller.loadAll,
                       ),
                     )

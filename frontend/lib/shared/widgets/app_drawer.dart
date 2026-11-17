@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/storage/token_storage.dart';
@@ -15,9 +15,15 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Nullable so screens tested on their own (without the app's provider) still work.
-    final user = context.watch<UserController?>()?.user;
+   
+    final users = Get.isRegistered<UserController>() ? Get.find<UserController>() : null;
+    if (users == null) return _buildMenu(context, null);
 
+    
+    return Obx(() => _buildMenu(context, users.user.value));
+  }
+
+  Widget _buildMenu(BuildContext context, User? user) {
     return Drawer(
       backgroundColor: AppColors.surface,
       child: SafeArea(
@@ -95,7 +101,7 @@ class AppDrawer extends StatelessWidget {
   Future<void> _logout(BuildContext context) async {
     await TokenStorage().clear();
     if (!context.mounted) return;
-    context.read<UserController?>()?.clear();
+    if (Get.isRegistered<UserController>()) Get.find<UserController>().clear();
     context.go(AppRoutes.login);
   }
 }
@@ -157,7 +163,7 @@ class _DrawerHeader extends StatelessWidget {
   }
 }
 
-/// Small grey section title, like FOCUS or SPARKY.
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 

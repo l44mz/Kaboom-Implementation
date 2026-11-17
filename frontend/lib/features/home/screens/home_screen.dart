@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Durations the user can pick, in minutes. The backend's minimum is 10.
+
   static const _durations = [10, 15, 25, 45, 60];
 
   final _sessionService = SessionService(ApiClient(TokenStorage()));
@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     try {
       // Shared with the side menu on every screen, so the coins match everywhere.
-      await context.read<UserController>().load();
+      await Get.find<UserController>().load();
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = apiErrorMessage(e));
@@ -93,12 +93,21 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_error != null) {
       return ErrorView(message: _error!, onRetry: _loadUser);
     }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+    
+    return Padding(
+      // 24 on top leaves room for the face's glow, so it isn't cut off.
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const RobotFace(expression: RobotExpression.ready, glow: true),
-          const SizedBox(height: 24),
+          const Flexible(
+            flex: 3,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: RobotFace(expression: RobotExpression.ready, glow: true),
+            ),
+          ),
+          const SizedBox(height: 20),
           const Text(
             'Ready to Focus?',
             style: TextStyle(
@@ -107,9 +116,15 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 32),
-          _DurationRing(minutes: _minutes),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          Flexible(
+            flex: 4,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: _DurationRing(minutes: _minutes),
+            ),
+          ),
+          const SizedBox(height: 20),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -127,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           PrimaryButton(
             label: 'Start Session',
             onPressed: _startSession,

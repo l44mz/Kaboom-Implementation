@@ -4,7 +4,9 @@ import 'package:kaboom_app/app.dart';
 void main() {
   testWidgets('app starts on the sign up screen', (tester) async {
     await tester.pumpWidget(const KaboomApp());
-    await tester.pumpAndSettle();
+    // Sparky's face moves forever, so pumpAndSettle would never finish.
+    // Pump a short time instead.
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Sign Up'), findsOneWidget);
   });
 }

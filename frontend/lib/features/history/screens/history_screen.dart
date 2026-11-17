@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -20,19 +21,17 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  final _controller = HistoryController();
+  // Get.put creates the controller, registers it in GetX, and calls its onInit()
+  // (which loads the history). Other widgets could now use Get.find<HistoryController>().
+  final _controller = Get.put(HistoryController());
 
   static const _avgColor = Color(0xFF38BDF8);
 
   @override
-  void initState() {
-    super.initState();
-    _controller.load();
-  }
-
-  @override
   void dispose() {
-    _controller.dispose();
+    // We navigate with go_router, not GetX, so GetX can't tell when this page closes.
+    // Delete the controller ourselves, or it stays in memory with old data.
+    Get.delete<HistoryController>();
     super.dispose();
   }
 
@@ -41,9 +40,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) => RefreshIndicator(
+        // Obx redraws everything inside when any .value read inside it changes
+        // (range, data, isLoading, errorMessage, showAll). No listenable to pass.
+        child: Obx(
+          () => RefreshIndicator(
             onRefresh: _controller.load,
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -57,7 +57,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: FilterPills<HistoryRange>(
                     options: {for (final r in HistoryRange.values) r: r.label},
-                    selected: _controller.range,
+                    selected: _controller.range.value,
                     onSelected: _controller.setRange,
                   ),
                 ),
@@ -75,18 +75,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildContent() {
-    final data = _controller.data;
+    // Called inside the Obx above, so these .value reads are tracked too.
+    final data = _controller.data.value;
 
-    if (_controller.isLoading && data == null) {
+    if (_controller.isLoading.value && data == null) {
       return const Padding(
         padding: EdgeInsets.only(top: 60),
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    if (_controller.errorMessage != null && data == null) {
+    if (_controller.errorMessage.value != null && data == null) {
       return SizedBox(
         height: 260,
-        child: ErrorView(message: _controller.errorMessage!, onRetry: _controller.load),
+        child: ErrorView(message: _controller.errorMessage.value!, onRetry: _controller.load),
       );
     }
     if (data == null) return const SizedBox.shrink();
@@ -120,7 +121,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         const SizedBox(height: 14),
 
         // Chart
-        FocusBarChart(bars: data.bars, caption: _controller.range.chartCaption),
+        FocusBarChart(bars: data.bars, caption: _controller.range.value.chartCaption),
         const SizedBox(height: 20),
 
         // Past sessions
@@ -135,7 +136,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               TextButton(
                 onPressed: _controller.toggleShowAll,
                 child: Text(
-                  _controller.showAll ? 'Show less' : 'See all',
+                  _controller.showAll.value ? 'Show less' : 'See all',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),

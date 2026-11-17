@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/notifications/session_notifications.dart';
@@ -183,7 +183,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
 
     if (!mounted) return;
     // The backend added the coins when the session ended, so reload them for the side menu.
-    context.read<UserController?>()?.refresh();
+    if (Get.isRegistered<UserController>()) Get.find<UserController>().reload();
     context.go(AppRoutes.sessionComplete, extra: result);
   }
 

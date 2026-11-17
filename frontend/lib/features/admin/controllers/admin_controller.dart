@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -9,7 +9,9 @@ import '../models/product.dart';
 import '../services/admin_service.dart';
 
 /// Logic and state for the admin screens.
-class AdminController extends ChangeNotifier {
+/// Used by two screens at the same time (the dashboard, and the form on top of it),
+/// so each screen registers its own copy with a tag.
+class AdminController extends GetxController {
   AdminController({TokenStorage? tokens}) : _tokens = tokens ?? TokenStorage() {
     _service = AdminService(ApiClient(_tokens));
   }
@@ -17,29 +19,32 @@ class AdminController extends ChangeNotifier {
   final TokenStorage _tokens;
   late final AdminService _service;
 
-  AdminStats? stats;
-  List<Product> products = [];
-  bool isLoading = false;
-  bool isSaving = false;
-  String? errorMessage;
+  // ---------- state (observable) ----------
+
+  final stats = Rxn<AdminStats>();
+  final products = <Product>[].obs; // RxList
+  final isLoading = false.obs;
+  final isSaving = false.obs;
+  final errorMessage = RxnString();
+
+  // No onInit() here: only the dashboard needs loadAll(), not the form.
+  // So the dashboard calls it itself, in initState.
 
   /// Loads the stats and the product list at the same time.
   Future<void> loadAll() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+    isLoading.value = true;
+    errorMessage.value = null;
     try {
       final results = await Future.wait([
         _service.getStats(),
         _service.getProducts(),
       ]);
-      stats = results[0] as AdminStats;
-      products = results[1] as List<Product>;
+      stats.value = results[0] as AdminStats;
+      products.assignAll(results[1] as List<Product>);
     } on DioException catch (e) {
-      errorMessage = _message(e);
+      errorMessage.value = _message(e);
     } finally {
-      isLoading = false;
-      notifyListeners();
+      isLoading.value = false;
     }
   }
 
@@ -52,9 +57,8 @@ class AdminController extends ChangeNotifier {
     String? description,
     required bool available,
   }) async {
-    isSaving = true;
-    errorMessage = null;
-    notifyListeners();
+    isSaving.value = true;
+    errorMessage.value = null;
     try {
       final saved = existing == null
           ? await _service.addProduct(
@@ -77,11 +81,10 @@ class AdminController extends ChangeNotifier {
       }
       return true;
     } on DioException catch (e) {
-      errorMessage = _message(e);
+      errorMessage.value = _message(e);
       return false;
     } finally {
-      isSaving = false;
-      notifyListeners();
+      isSaving.value = false;
     }
   }
 
@@ -90,14 +93,12 @@ class AdminController extends ChangeNotifier {
     try {
       final updated =
           await _service.setAvailability(product.id, !product.available);
-      products = [
+      products.assignAll([
         for (final p in products) p.id == product.id ? updated : p,
-      ];
-      notifyListeners();
+      ]);
       return true;
     } on DioException catch (e) {
-      errorMessage = _message(e);
-      notifyListeners();
+      errorMessage.value = _message(e);
       return false;
     }
   }

@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -8,7 +8,7 @@ import '../../../shared/models/user.dart';
 import '../services/auth_service.dart';
 
 /// Logic and state for the Sign Up and Login screens.
-class AuthController extends ChangeNotifier {
+class AuthController extends GetxController {
   AuthController({TokenStorage? tokens})
       : _tokens = tokens ?? TokenStorage() {
     _authService = AuthService(ApiClient(_tokens));
@@ -17,10 +17,11 @@ class AuthController extends ChangeNotifier {
   final TokenStorage _tokens;
   late final AuthService _authService;
 
-  bool isLoading = false;
-  String? errorMessage;
+  
+  final isLoading = false.obs;
+  final errorMessage = RxnString();
 
-  // ---------- validation (used by both screens) ----------
+  
 
   static String? validateName(String? value) {
     final name = value?.trim() ?? '';
@@ -38,7 +39,7 @@ class AuthController extends ChangeNotifier {
     return null;
   }
 
-  /// Sign up rules: same as the backend (8+ characters, at least one number).
+ 
   static String? validateNewPassword(String? value) {
     final password = value ?? '';
     if (password.isEmpty) return 'Please enter a password';
@@ -47,11 +48,11 @@ class AuthController extends ChangeNotifier {
     return null;
   }
 
-  /// Login only checks that something was typed.
+  /// Login 
   static String? validateLoginPassword(String? value) =>
       (value ?? '').isEmpty ? 'Please enter your password' : null;
 
-  // ---------- actions ----------
+
 
   /// Returns true if the account was created.
   Future<bool> signUp({
@@ -83,25 +84,23 @@ class AuthController extends ChangeNotifier {
     String? conflictMessage,
     String? unauthorizedMessage,
   }) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+    isLoading.value = true;
+    errorMessage.value = null;
     try {
       await action();
       return true;
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       if (status == 409 && conflictMessage != null) {
-        errorMessage = conflictMessage;
+        errorMessage.value = conflictMessage;
       } else if (status == 401 && unauthorizedMessage != null) {
-        errorMessage = unauthorizedMessage;
+        errorMessage.value = unauthorizedMessage;
       } else {
-        errorMessage = apiErrorMessage(e);
+        errorMessage.value = apiErrorMessage(e);
       }
       return false;
     } finally {
-      isLoading = false;
-      notifyListeners();
+      isLoading.value = false;
     }
   }
 }

@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -7,54 +7,63 @@ import '../../../core/storage/token_storage.dart';
 import '../models/history.dart';
 import '../services/history_service.dart';
 
-/// Logic and state for the History screen.
-class HistoryController extends ChangeNotifier {
+
+class HistoryController extends GetxController {
   HistoryController({ApiClient? api})
       : _service = HistoryService(api ?? ApiClient(TokenStorage()));
 
   final HistoryService _service;
 
-  /// How many sessions show before "See all" is tapped.
+
   static const previewCount = 4;
 
-  HistoryRange range = HistoryRange.week;
-  HistoryData? data;
-  bool isLoading = false;
-  String? errorMessage;
-  bool showAll = false;
+
+
+  final range = HistoryRange.week.obs; // Rx<HistoryRange>
+  final data = Rxn<HistoryData>(); // null until the first load
+  final isLoading = false.obs; // RxBool
+  final errorMessage = RxnString(); // null = no error
+  final showAll = false.obs;
+
+
+  @override
+  void onInit() {
+    super.onInit();
+    load();
+  }
+
+  
 
   /// The sessions to list: the first few, or all of them after "See all".
   List<PastSession> get visibleSessions {
-    final sessions = data?.sessions ?? const [];
-    return showAll ? sessions : sessions.take(previewCount).toList();
+    final sessions = data.value?.sessions ?? const <PastSession>[];
+    return showAll.value ? sessions : sessions.take(previewCount).toList();
   }
 
-  bool get hasMoreSessions => (data?.sessions.length ?? 0) > previewCount;
+  bool get hasMoreSessions => (data.value?.sessions.length ?? 0) > previewCount;
+
+  
 
   /// Switches the tab (Day / Week / Month / All time) and loads it.
   Future<void> setRange(HistoryRange value) async {
-    if (value == range && data != null) return;
-    range = value;
-    showAll = false;
+    if (value == range.value && data.value != null) return;
+    range.value = value;
+    showAll.value = false;
     await load();
   }
 
-  void toggleShowAll() {
-    showAll = !showAll;
-    notifyListeners();
-  }
+
+  void toggleShowAll() => showAll.toggle();
 
   Future<void> load() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+    isLoading.value = true; // the screen shows the spinner right away
+    errorMessage.value = null;
     try {
-      data = await _service.getHistory(range);
+      data.value = await _service.getHistory(range.value);
     } on DioException catch (e) {
-      errorMessage = apiErrorMessage(e);
+      errorMessage.value = apiErrorMessage(e);
     } finally {
-      isLoading = false;
-      notifyListeners();
+      isLoading.value = false;
     }
   }
 }

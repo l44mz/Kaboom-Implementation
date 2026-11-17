@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
@@ -13,7 +13,7 @@ import '../services/account_service.dart';
 
 /// Logic and state for My Account.
 /// The profile and coins come from the shared [UserController], so they match the side menu.
-class AccountController extends ChangeNotifier {
+class AccountController extends GetxController {
   AccountController({required this.users, TokenStorage? tokens})
       : _tokens = tokens ?? TokenStorage() {
     final api = ApiClient(_tokens);
@@ -26,39 +26,48 @@ class AccountController extends ChangeNotifier {
   late final AccountService _account;
   late final HistoryService _history;
 
-  User? get user => users.user;
-  RobotInfo? robot;
+ 
+  User? get user => users.user.value;
+
+  final robot = Rxn<RobotInfo>();
+
+  final sessionCount = RxnInt();
+  final focusSeconds = RxnInt();
+
+  final isLoading = false.obs;
+  final errorMessage = RxnString();
 
 
-  int? sessionCount;
-  int? focusSeconds;
+  final notificationsOn = true.obs;
 
-  bool isLoading = false;
-  String? errorMessage;
+  // ---------- lifecycle ----------
 
-  /// Only on this device for now; there is no notifications backend yet.
-  bool notificationsOn = true;
+  @override
+  void onInit() {
+    super.onInit();
+    load();
+  }
+
+  // ---------- actions ----------
 
   /// Loads the profile, the robot and the all-time stats at the same time.
   Future<void> load() async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
+    isLoading.value = true;
+    errorMessage.value = null;
     try {
       final results = await Future.wait<Object?>([
         users.load(),
         _account.getMyRobot(),
         _history.getHistory(HistoryRange.all),
       ]);
-      robot = results[1] as RobotInfo?;
+      robot.value = results[1] as RobotInfo?;
       final allTime = results[2] as HistoryData;
-      sessionCount = allTime.sessionCount;
-      focusSeconds = allTime.totalFocusSeconds;
+      sessionCount.value = allTime.sessionCount;
+      focusSeconds.value = allTime.totalFocusSeconds;
     } on DioException catch (e) {
-      errorMessage = apiErrorMessage(e);
+      errorMessage.value = apiErrorMessage(e);
     } finally {
-      isLoading = false;
-      notifyListeners();
+      isLoading.value = false;
     }
   }
 
@@ -68,7 +77,7 @@ class AccountController extends ChangeNotifier {
       final updated =
           await _account.updateProfile(name: name.trim(), email: email.trim());
       // With a new email the old login token stops working, so only reload when it is the same.
-      if (updated.email == users.user?.email) await users.refresh();
+      if (updated.email == users.user.value?.email) await users.reload();
       return null;
     } on DioException catch (e) {
       return switch (e.response?.statusCode) {
@@ -91,10 +100,7 @@ class AccountController extends ChangeNotifier {
     }
   }
 
-  void setNotifications(bool value) {
-    notificationsOn = value;
-    notifyListeners();
-  }
+  void setNotifications(bool value) => notificationsOn.value = value;
 
   Future<void> logout() async {
     await _tokens.clear();

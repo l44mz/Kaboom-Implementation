@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/controllers/user_controller.dart';
@@ -23,18 +23,13 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  late final ShopController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = ShopController(users: context.read<UserController>());
-    _controller.load();
-  }
+  // Get.put creates the controller and calls its onInit() (which loads the shop).
+  final _controller = Get.put(ShopController(users: Get.find<UserController>()));
 
   @override
   void dispose() {
-    _controller.dispose();
+    // go_router closes this page, not GetX, so delete the controller ourselves.
+    Get.delete<ShopController>();
     super.dispose();
   }
 
@@ -77,10 +72,11 @@ class _ShopScreenState extends State<ShopScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      // Rebuild when the shop changes or the shared coins change.
-      listenable: Listenable.merge([_controller, _controller.users]),
-      builder: (context, _) => Scaffold(
+    // Obx redraws when anything it reads changes: the items, the filter, loading,
+    // errors, and the shared coins (_controller.coins reads users.user.value).
+    // No Listenable.merge needed.
+    return Obx(
+      () => Scaffold(
         drawer: const AppDrawer(),
         body: SafeArea(
           child: Padding(
@@ -97,7 +93,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: FilterPills<String>(
                     options: ShopItem.filters,
-                    selected: _controller.filter,
+                    selected: _controller.filter.value,
                     onSelected: _controller.setFilter,
                   ),
                 ),
@@ -112,11 +108,11 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   Widget _buildBody() {
-    if (_controller.isLoading && _controller.items.isEmpty) {
+    if (_controller.isLoading.value && _controller.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_controller.errorMessage != null && _controller.items.isEmpty) {
-      return ErrorView(message: _controller.errorMessage!, onRetry: _controller.load);
+    if (_controller.errorMessage.value != null && _controller.items.isEmpty) {
+      return ErrorView(message: _controller.errorMessage.value!, onRetry: _controller.load);
     }
 
     final items = _controller.visibleItems;
@@ -142,11 +138,16 @@ class _ShopScreenState extends State<ShopScreen> {
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
-          return ShopItemCard(
-            item: item,
-            busy: _controller.busyItemId == item.id,
-            image: _controller.images[item.id],
-            onTap: () => _onTap(item),
+          // Its own Obx: the grid builds cards later (while scrolling), outside the
+          // big Obx above, so the big one can't see these reads. This one redraws
+          // the card when its spinner (busyItemId) or its picture (images) changes.
+          return Obx(
+            () => ShopItemCard(
+              item: item,
+              busy: _controller.busyItemId.value == item.id,
+              image: _controller.images[item.id],
+              onTap: () => _onTap(item),
+            ),
           );
         },
       ),

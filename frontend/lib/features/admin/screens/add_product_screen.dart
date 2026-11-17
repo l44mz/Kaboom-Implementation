@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -25,8 +26,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _controller = AdminController();
+  // Tag 'form': the dashboard under this screen still has its own AdminController.
+  final _controller = Get.put(AdminController(), tag: 'form');
 
+  // Form-only values stay plain fields with setState: nothing else needs them,
+  // so they don't have to be observable. GetX and setState can live together.
   String _category = Product.categories.first;
   bool _available = true;
 
@@ -50,7 +54,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _nameController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
-    _controller.dispose();
+    Get.delete<AdminController>(tag: 'form');
     super.dispose();
   }
 
@@ -71,7 +75,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (ok) {
       context.pop(true); // the dashboard shows a message and reloads
     } else {
-      showAppSnackBar(context, _controller.errorMessage!, isError: true);
+      showAppSnackBar(context, _controller.errorMessage.value ?? '', isError: true);
     }
   }
 
@@ -224,10 +228,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 Center(
                   child: SizedBox(
                     width: 316,
-                    child: ListenableBuilder(
-                      listenable: _controller,
-                      builder: (context, _) => FilledButton(
-                        onPressed: _controller.isSaving ? null : _onSubmit,
+                    child: Obx(
+                      () => FilledButton(
+                        onPressed: _controller.isSaving.value ? null : _onSubmit,
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.secondary,
                           foregroundColor: Colors.white,
@@ -240,7 +243,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        child: _controller.isSaving
+                        child: _controller.isSaving.value
                             ? const SizedBox(
                                 width: 22,
                                 height: 22,
