@@ -34,6 +34,10 @@ public class Product {
     @Column(name = "is_available")
     private boolean isAvailable = true;
 
+    // Matches the required stock column in the existing MySQL table.
+    @Column(nullable = false)
+    private int stock = 0;
+
     public enum Category {
         hat, screen, effect
     }
@@ -43,5 +47,6 @@ public class Product {
         this.category = category;
         this.price = price;
         this.description = description;
+        this.stock = 0; // New products start with zero stock until inventory is assigned.
     }
 }

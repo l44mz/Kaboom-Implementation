@@ -62,6 +62,9 @@ public class UserServices {
                 passwordEncoder.encode(dto.getPassword())
         );
 
+        // Give every newly registered user 100 coins as a starting balance.
+        user.setCoins(100);
+
         user.setCreatedAt(LocalDateTime.now());
         userRepository.save(user);
 
@@ -102,6 +105,16 @@ public class UserServices {
                         HttpStatus.NOT_FOUND,
                         "User not found"
                 ));
+    }
+
+    // NEW: finds the logged-in user by the email stored in their access token.
+    public UserDto getByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+        return userMapper.toDto(user);
     }
 
     @Transactional
@@ -146,6 +159,79 @@ public class UserServices {
         userRepository.save(user);
 
         return userMapper.toDto(user);
+    }
+
+    /**
+     * Changes the user's name and email (PUT /users/me).
+     * The access token holds the email, so after an email change the app must log in again.
+     */
+    @Transactional
+    public UserDto updateProfile(UUID userId, String newName, String newEmail) {
+        User user = getUserById(userId);
+
+        if (newName == null || newName.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Name cannot be empty"
+            );
+        }
+
+        String email = newEmail == null
+                ? null
+                : newEmail.trim().toLowerCase(Locale.ROOT);
+
+        if (!isValidEmail(email)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid email"
+            );
+        }
+
+        Optional<User> existingUser = userRepository.findByEmail(email);
+
+        if (existingUser.isPresent()
+                && !existingUser.get().getId().equals(userId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Email already in use"
+            );
+        }
+
+        user.setName(newName.trim());
+        user.setEmail(email);
+        userRepository.save(user);
+
+        return userMapper.toDto(user);
+    }
+
+    /**
+     * Changes the password after checking the current one (PUT /users/me/password).
+     */
+    @Transactional
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
+        if (currentPassword == null
+                || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Current password is wrong"
+            );
+        }
+
+        if (!isValidPassword(newPassword)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "New password must be at least 8 characters"
+            );
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Transactional

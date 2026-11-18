@@ -1,7 +1,10 @@
 
 package com.example.kaboom.controllers;
 
+import com.example.kaboom.dtos.*;
 import com.example.kaboom.entities.Robot;
+import com.example.kaboom.services.FocusSessionService;
+import com.example.kaboom.services.RobotPairingService;
 import com.example.kaboom.services.RobotService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -9,7 +12,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,9 +34,13 @@ import java.util.UUID;
 public class RobotController {
 
     private final RobotService robotService;
+    private final FocusSessionService focusSessionService;
+    private final RobotPairingService robotPairingService;
 
-    public RobotController(RobotService robotService) {
+    public RobotController(RobotService robotService, FocusSessionService focusSessionService,  RobotPairingService robotPairingService) {
         this.robotService = robotService;
+        this.focusSessionService = focusSessionService;
+        this.robotPairingService = robotPairingService;
     }
 
     /**
@@ -56,14 +65,8 @@ public class RobotController {
             @ApiResponse(responseCode = "500", description = "Unexpected server error")
     })
     @GetMapping("/me")
-    public ResponseEntity<Robot> getMyRobot(
-            @RequestParam UUID userId) {
-
-        // TODO: Replace userId with the authenticated user's ID from the security context.
-        // Do not trust a user ID supplied by the client for authorization.
-        throw new UnsupportedOperationException(
-                "Connect the authenticated user to RobotService before enabling this endpoint."
-        );
+    public ResponseEntity<RobotResponse> getMyRobot(Authentication authentication) {
+        return ResponseEntity.ok(robotService.getRobotForUser(authentication.getName()));
     }
 
     /**
@@ -94,4 +97,47 @@ public class RobotController {
         // TODO: Verify the authenticated user and robot ownership before selecting the robot.
         return ResponseEntity.ok(robotService.selectRobot(userId, robotId));
     }
+
+
+    //-------------------------------------------------------------------------
+
+
+    @Operation(summary = "Report a focus state",
+            description = "Called by the robot on state changes and as a heartbeat.")
+    @PostMapping("/{robotId}/focus-states")
+    public ResponseEntity<FocusStateResponse> reportFocusState(
+            @PathVariable UUID robotId,
+            @Valid @RequestBody FocusStateRequest request) {
+
+        // TODO: when device JWT exists, return 403 unless its robot claim equals robotId.
+        return ResponseEntity.ok(focusSessionService.recordState(robotId, request));
+    }
+
+    //------------------------------------------------------------------------
+
+    @Operation(summary = "Request a pairing code", description = "Robot only. No token.")
+    @PostMapping("/pairing-codes")
+    public ResponseEntity<PairingCodeResponse> requestPairingCode(
+            @Valid @RequestBody PairingCodeRequest request) {
+        return ResponseEntity.ok(robotPairingService.requestCode(request.serialNumber()));
+    }
+
+    @Operation(summary = "Claim a pairing code", description = "App only. Requires a user JWT.")
+    @PostMapping("/pair")
+    public ResponseEntity<Robot> pair(
+            Authentication authentication,
+            @Valid @RequestBody PairRequest request) {
+
+        return ResponseEntity.ok(
+                robotPairingService.claim(authentication.getName(), request.pairingCode()));
+    }
+
+    @Operation(summary = "Collect device tokens", description = "Robot only. The secret is the credential.")
+    @PostMapping("/pairing-status")
+    public ResponseEntity<PairingStatusResponse> pairingStatus(
+            @Valid @RequestBody PairingStatusRequest request) {
+        return ResponseEntity.ok(robotPairingService.collect(request.pairingSecret()));
+    }
+
+
 }
