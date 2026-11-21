@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
@@ -20,13 +21,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _controller = AuthController();
+  // Own tag, so it never mixes with the Sign Up screen's AuthController.
+  final _controller = Get.put(AuthController(), tag: 'login');
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _controller.dispose();
+    Get.delete<AuthController>(tag: 'login');
     super.dispose();
   }
 
@@ -42,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (user == null) {
-      showAppSnackBar(context, _controller.errorMessage!, isError: true);
+      showAppSnackBar(context, _controller.errorMessage.value ?? '', isError: true);
     } else {
       context.go(user.isAdmin ? AppRoutes.admin : AppRoutes.home);
     }
@@ -53,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
           child: Form(
             key: _formKey,
             child: Column(
@@ -83,12 +85,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 48),
                 // Rebuilds only the button when isLoading changes.
-                ListenableBuilder(
-                  listenable: _controller,
-                  builder: (context, _) => PrimaryButton(
+                Obx(
+                  () => PrimaryButton(
                     label: 'Login',
                     onPressed: _onSubmit,
-                    isLoading: _controller.isLoading,
+                    isLoading: _controller.isLoading.value,
                   ),
                 ),
                 const SizedBox(height: 24),

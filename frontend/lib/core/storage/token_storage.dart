@@ -10,6 +10,10 @@ class TokenStorage {
     await _storage.write(key: _refreshKey, value: refresh);
   }
 
+  /// Replaces only the access token (after a refresh).
+  Future<void> saveAccess(String access) =>
+      _storage.write(key: _accessKey, value: access);
+
   Future<String?> get accessToken => _storage.read(key: _accessKey);
   Future<String?> get refreshToken => _storage.read(key: _refreshKey);
 

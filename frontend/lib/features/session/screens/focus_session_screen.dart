@@ -3,9 +3,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
+import '../../../core/network/api_client.dart';
+import '../../../core/notifications/session_notifications.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/controllers/user_controller.dart';
@@ -15,31 +18,46 @@ import '../models/focus_session.dart';
 import '../models/focus_state.dart';
 import '../models/session_clock.dart';
 import '../models/session_result.dart';
-import '../services/mock_focus_states.dart';
+import '../services/session_service.dart';
 
 /// The running session (Figma "Focused / Distracted / Away Status In Session").
 class FocusSessionScreen extends StatefulWidget {
-  const FocusSessionScreen({super.key, this.session, this.states});
+  const FocusSessionScreen({super.key, this.session, this.states, this.service});
 
   /// The session just started on Home, passed through the router's `extra`.
   final FocusSession? session;
 
-  /// Robot states to show. Defaults to [mockFocusStates] until the backend sends real ones.
+  /// Robot states to show. Defaults to the real states from the backend
+  /// (SessionService.focusStates). Tests pass their own stream.
   final Stream<FocusState>? states;
+
+  /// The API calls for pause, resume and end. Defaults to a real SessionService.
+  final SessionService? service;
 
   @override
   State<FocusSessionScreen> createState() => _FocusSessionScreenState();
 }
 
 class _FocusSessionScreenState extends State<FocusSessionScreen> {
+  late final SessionService _service =
+      widget.service ?? SessionService(ApiClient(TokenStorage()));
+
   SessionClock? _clock;
   Timer? _ticker;
   StreamSubscription<FocusState>? _stateSub;
   FocusState _state = FocusState.focused;
 
-  // Seconds spent FOCUSED and not paused, for the summary. The server will
-  // compute this from state logs once PUT /end works.
+  /// False until the robot sends its first state, so we can say we're waiting for it.
+  bool _hasRobotState = false;
+
+  /// True once the session is ending, so it only ends once.
+  bool _finishing = false;
+
+  // Seconds spent FOCUSED and not paused, for the summary.
   int _focusedSeconds = 0;
+
+  /// The phone notification with the timer (Android only, does nothing elsewhere).
+  final _notifications = SessionNotifications.instance;
 
   @override
   void initState() {
@@ -52,8 +70,13 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       plannedSeconds: session.plannedDurationSeconds,
     );
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-    _stateSub = (widget.states ?? mockFocusStates()).listen((state) {
-      if (mounted) setState(() => _state = state);
+    unawaited(_startNotification());
+    _stateSub = (widget.states ?? _service.focusStates(session.id)).listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _state = state;
+        _hasRobotState = true;
+      });
     });
   }
 
@@ -64,10 +87,22 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     super.dispose();
   }
 
+  /// The moment the session will end if it isn't paused again.
+  DateTime _endTime(DateTime now) =>
+      now.add(Duration(seconds: _clock!.remainingSeconds(now)));
+
+  Future<void> _startNotification() async {
+    await _notifications.askPermission();
+    if (!mounted || _finishing || _clock!.isPaused) return;
+    await _notifications.showRunning(_endTime(DateTime.now()));
+  }
+
   void _tick() {
-    if (!mounted) return;
+    if (!mounted || _finishing) return;
     final clock = _clock!;
-    if (!clock.isPaused && _state == FocusState.focused) _focusedSeconds++;
+    if (!clock.isPaused && _hasRobotState && _state == FocusState.focused) {
+      _focusedSeconds++;
+    }
     if (clock.isFinished(DateTime.now())) {
       _finish(endedEarly: false);
     } else {
@@ -77,8 +112,27 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
 
   void _togglePause() {
     final now = DateTime.now();
-    // TODO: call PUT /focus-sessions/{id}/pause and /resume once they take the user from the token.
-    setState(() => _clock!.isPaused ? _clock!.resume(now) : _clock!.pause(now));
+    final pausing = !_clock!.isPaused;
+    // Update the screen right away, then tell the backend (which also tells the robot).
+    setState(() => pausing ? _clock!.pause(now) : _clock!.resume(now));
+    unawaited(_syncPause(pausing));
+    // Paused: the notification stops counting. Resumed: it counts to the new end time.
+    unawaited(pausing
+        ? _notifications.showPaused(_clock!.remainingSeconds(now))
+        : _notifications.showRunning(_endTime(now)));
+  }
+
+  Future<void> _syncPause(bool pausing) async {
+    final id = widget.session!.id;
+    try {
+      if (pausing) {
+        await _service.pauseSession(id);
+      } else {
+        await _service.resumeSession(id);
+      }
+    } catch (e) {
+      debugPrint('Could not ${pausing ? 'pause' : 'resume'} the session: $e');
+    }
   }
 
   Future<void> _confirmEnd() async {
@@ -103,18 +157,33 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     if (end == true) _finish(endedEarly: true);
   }
 
-  void _finish({required bool endedEarly}) {
+  Future<void> _finish({required bool endedEarly}) async {
+    if (_finishing) return;
+    _finishing = true;
     _ticker?.cancel();
     _stateSub?.cancel();
-    // TODO: call PUT /focus-sessions/{id}/end and build the result from its response.
-    final result = SessionResult.local(
+    unawaited(_notifications.sessionEnded(endedEarly: endedEarly));
+
+    // The backend ends the session, stops the robot, and decides the coins.
+    // If it can't be reached, fall back to the app's own count.
+    var result = SessionResult.local(
       focusedSeconds: _focusedSeconds,
       endedEarly: endedEarly,
     );
+    try {
+      final coins = await _service.endSession(widget.session!.id);
+      result = SessionResult(
+        focusedSeconds: _focusedSeconds,
+        coinsEarned: coins,
+        endedEarly: endedEarly,
+      );
+    } catch (e) {
+      debugPrint('Could not end the session on the backend: $e');
+    }
+
     if (!mounted) return;
-    // The backend adds the coins when the session ends, so reload them for the side menu.
-    // Keep this after the PUT /end call above once that is connected.
-    context.read<UserController?>()?.refresh();
+    // The backend added the coins when the session ended, so reload them for the side menu.
+    if (Get.isRegistered<UserController>()) Get.find<UserController>().reload();
     context.go(AppRoutes.sessionComplete, extra: result);
   }
 
@@ -153,7 +222,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     final clock = _clock!;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
       child: Column(
         children: [
           RobotFace(expression: _expressionFor(_state)),
@@ -166,7 +235,11 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
             child: _TimerRing(
               fraction: clock.remainingFraction(now),
               time: SessionClock.format(clock.remainingSeconds(now)),
-              message: clock.isPaused ? 'Session paused' : _state.message,
+              message: clock.isPaused
+                  ? 'Session paused'
+                  : _hasRobotState
+                      ? _state.message
+                      : 'Waiting for Sparky...',
             ),
           ),
           const SizedBox(height: 23),
@@ -201,7 +274,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
               ),
               child: const Text(
                 'End Session',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -251,7 +324,7 @@ class _StatusChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             state.label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -327,7 +400,7 @@ class _TimerRing extends StatelessWidget {
                 message,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),

@@ -1,4 +1,3 @@
-
 package com.example.kaboom.config;
 
 import com.example.kaboom.repositories.UserRepository;
@@ -57,6 +56,17 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
+                        ).permitAll()
+
+                        // TEMPORARY: the robot has no login yet, so its two calls are open.
+                        // Replace with a device token before deploying.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/robots/me/active-session"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/robots/*/focus-states"
                         ).permitAll()
 
                         // Only ADMIN users can create products.

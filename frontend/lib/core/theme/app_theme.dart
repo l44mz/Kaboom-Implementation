@@ -43,6 +43,6 @@ class AppTheme {
   );
   static const numberStyle = TextStyle(
     fontFamily: 'JetBrainsMono',
-    fontSize: 16,
+    fontSize: 14,
   );
 }

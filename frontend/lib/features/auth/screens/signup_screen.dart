@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
@@ -21,14 +22,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _controller = AuthController();
+
+  // Own tag, so it never mixes with the Login screen's AuthController.
+  final _controller = Get.put(AuthController(), tag: 'signup');
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _controller.dispose();
+    Get.delete<AuthController>(tag: 'signup');
     super.dispose();
   }
 
@@ -47,7 +50,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       showAppSnackBar(context, 'Account created! Please log in.');
       context.go(AppRoutes.login);
     } else {
-      showAppSnackBar(context, _controller.errorMessage!, isError: true);
+      showAppSnackBar(context, _controller.errorMessage.value ?? '', isError: true);
     }
   }
 
@@ -56,7 +59,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
           child: Form(
             key: _formKey,
             child: Column(
@@ -93,12 +96,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   validator: AuthController.validateNewPassword,
                 ),
                 const SizedBox(height: 40),
-                ListenableBuilder(
-                  listenable: _controller,
-                  builder: (context, _) => PrimaryButton(
+                // Only the button redraws when isLoading changes.
+                Obx(
+                  () => PrimaryButton(
                     label: 'Sign Up',
                     onPressed: _onSubmit,
-                    isLoading: _controller.isLoading,
+                    isLoading: _controller.isLoading.value,
                   ),
                 ),
                 const SizedBox(height: 24),

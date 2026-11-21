@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/storage/token_storage.dart';
@@ -15,9 +15,15 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Nullable so screens tested on their own (without the app's provider) still work.
-    final user = context.watch<UserController?>()?.user;
+   
+    final users = Get.isRegistered<UserController>() ? Get.find<UserController>() : null;
+    if (users == null) return _buildMenu(context, null);
 
+    
+    return Obx(() => _buildMenu(context, users.user.value));
+  }
+
+  Widget _buildMenu(BuildContext context, User? user) {
     return Drawer(
       backgroundColor: AppColors.surface,
       child: SafeArea(
@@ -25,49 +31,63 @@ class AppDrawer extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _DrawerHeader(user: user),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.play_arrow_outlined),
-                label: const Text('Start Session'),
-                style: FilledButton.styleFrom(
-                  alignment: Alignment.centerLeft,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // The menu items scroll if the window is short.
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.play_arrow_outlined),
+                      label: const Text('Start Session'),
+                      style: FilledButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const _SectionLabel('FOCUS'),
+                  const _MenuItem(
+                    icon: Icons.history,
+                    label: 'Session History',
+                    route: AppRoutes.history,
+                  ),
+                  const _SectionLabel('SPARKY'),
+                  const _MenuItem(
+                    icon: Icons.shopping_bag_outlined,
+                    label: 'Store',
+                    route: AppRoutes.shop,
+                  ),
+                  const _MenuItem(
+                    icon: Icons.bluetooth,
+                    label: 'Connect Robot',
+                    route: AppRoutes.robotPair,
+                  ),
+                  const _SectionLabel('ACCOUNT'),
+                  const _MenuItem(
+                    icon: Icons.person_outline,
+                    label: 'My Account',
+                    route: AppRoutes.account,
+                  ),
+                  if (user?.isAdmin ?? false) ...[
+                    const _SectionLabel('ADMIN'),
+                    const _MenuItem(
+                      icon: Icons.dashboard_outlined,
+                      label: 'Admin Dashboard',
+                      route: AppRoutes.admin,
+                    ),
+                  ],
+                ],
               ),
             ),
-            const _SectionLabel('FOCUS'),
-            const _MenuItem(
-              icon: Icons.history,
-              label: 'Session History',
-              route: AppRoutes.history,
-            ),
-            const _SectionLabel('SPARKY'),
-            const _MenuItem(
-              icon: Icons.shopping_bag_outlined,
-              label: 'Store',
-              route: AppRoutes.shop,
-            ),
-            const _MenuItem(
-              icon: Icons.bluetooth,
-              label: 'Connect Robot',
-              route: AppRoutes.robotPair,
-            ),
-            if (user?.isAdmin ?? false) ...[
-              const _SectionLabel('ADMIN'),
-              const _MenuItem(
-                icon: Icons.dashboard_outlined,
-                label: 'Admin Dashboard',
-                route: AppRoutes.admin,
-              ),
-            ],
-            const Spacer(),
             const Divider(color: AppColors.border),
             ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 24),
               leading: const Icon(Icons.logout, color: AppColors.textMuted),
               title: const Text('Log out'),
               onTap: () => _logout(context),
@@ -81,7 +101,7 @@ class AppDrawer extends StatelessWidget {
   Future<void> _logout(BuildContext context) async {
     await TokenStorage().clear();
     if (!context.mounted) return;
-    context.read<UserController?>()?.clear();
+    if (Get.isRegistered<UserController>()) Get.find<UserController>().clear();
     context.go(AppRoutes.login);
   }
 }
@@ -98,7 +118,7 @@ class _DrawerHeader extends StatelessWidget {
     final coins = user?.coins;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
       child: Row(
         children: [
           const CircleAvatar(
@@ -115,7 +135,7 @@ class _DrawerHeader extends StatelessWidget {
                   'Hi $name!',
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
@@ -128,7 +148,7 @@ class _DrawerHeader extends StatelessWidget {
                     Text(
                       coins == null ? '-- coins' : '$coins coins',
                       style: AppTheme.numberStyle.copyWith(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: AppColors.coin,
                       ),
                     ),
@@ -143,7 +163,7 @@ class _DrawerHeader extends StatelessWidget {
   }
 }
 
-/// Small grey section title, like FOCUS or SPARKY.
+
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
@@ -152,11 +172,11 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 4),
       child: Text(
         text,
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           letterSpacing: 1,
           color: AppColors.textMuted,
@@ -181,6 +201,7 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       leading: Icon(icon, color: AppColors.textMuted),
       title: Text(label),
       trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),

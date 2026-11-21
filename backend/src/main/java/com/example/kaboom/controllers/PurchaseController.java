@@ -1,8 +1,7 @@
-
 package com.example.kaboom.controllers;
 
 import com.example.kaboom.dtos.CreatePurchaseRequest;
-import com.example.kaboom.entities.Purchase;
+import com.example.kaboom.dtos.PurchaseResponse;
 import com.example.kaboom.services.PurchaseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,8 +14,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/purchases")
 @Tag(name = "Purchases", description = "Shop purchases and purchase history")
@@ -28,25 +25,24 @@ public class PurchaseController {
         this.purchaseService = purchaseService;
     }
 
+    @Operation(
+            summary = "Buy a product",
+            description = "Buys one product for the logged-in user. Returns the purchase and the coins left. "
+                    + "400 = not enough coins, 409 = already owned or not in the shop."
+    )
     @PostMapping
-    @Operation(summary = "Purchase a product")
-    public ResponseEntity<Purchase> buyProduct(
+    public ResponseEntity<PurchaseResponse> buyProduct(
             @Valid @RequestBody CreatePurchaseRequest request) {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        Purchase purchase = purchaseService.buyProduct(
-                email, request.getProductId());
+        PurchaseResponse purchase = purchaseService.buyProduct(
+                currentEmail(), request.getProductId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(purchase);
     }
 
+    @Operation(summary = "My purchases", description = "The logged-in user's purchases, one page at a time.")
     @GetMapping
-    @Operation(summary = "Get authenticated user's purchase history")
-    public ResponseEntity<Page<Purchase>> getUserPurchases(
+    public ResponseEntity<Page<PurchaseResponse>> getUserPurchases(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -54,14 +50,13 @@ public class PurchaseController {
             return ResponseEntity.badRequest().build();
         }
 
+        return ResponseEntity.ok(
+                purchaseService.getUserPurchases(currentEmail(), PageRequest.of(page, size)));
+    }
+
+    private String currentEmail() {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
-
-        String email = authentication.getName();
-
-        Page<Purchase> purchases = purchaseService.getUserPurchases(
-                email, PageRequest.of(page, size));
-
-        return ResponseEntity.ok(purchases);
+        return authentication.getName();
     }
 }

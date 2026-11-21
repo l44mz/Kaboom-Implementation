@@ -1,9 +1,10 @@
-
 package com.example.kaboom.services;
 
 import com.example.kaboom.dtos.ProductDto;
 import com.example.kaboom.entities.Product;
+import com.example.kaboom.repositories.ProductImageRepository;
 import com.example.kaboom.repositories.ProductRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,9 +16,14 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductImageRepository productImageRepository;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(
+            ProductRepository productRepository,
+            ProductImageRepository productImageRepository
+    ) {
         this.productRepository = productRepository;
+        this.productImageRepository = productImageRepository;
     }
 
     // Returns only available products for regular shop users.
@@ -73,8 +79,18 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    /**
+     * Deletes a product and its associated image.
+     * Both operations run within a single transaction.
+     */
+    @Transactional
     public void deleteProduct(UUID id) {
         Product product = getProductById(id);
+
+        // Delete the associated image before deleting the product.
+        productImageRepository.deleteByProductId(id);
+
+        // Delete the product after its image has been removed.
         productRepository.delete(product);
     }
 }

@@ -1,4 +1,3 @@
-
 package com.example.kaboom.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -44,6 +43,20 @@ public class SessionResponse {
     )
     private String status;
 
+    @Schema(
+            description = "Last state reported by the robot: FOCUSED, DISTRACTED or AWAY "
+                    + "(null until the robot sends its first state)",
+            example = "FOCUSED",
+            nullable = true
+    )
+    private String currentState;
+
+    @Schema(
+            description = "Whether Sparky has exploded during this session",
+            example = "false"
+    )
+    private boolean explosionTriggered = false;
+
     public SessionResponse() {
     }
 
@@ -53,11 +66,34 @@ public class SessionResponse {
             Integer plannedDurationSeconds,
             LocalDateTime startTime,
             String status) {
+        this(id, robotId, plannedDurationSeconds, startTime, status, null, false);
+    }
+
+    public SessionResponse(
+            UUID id,
+            UUID robotId,
+            Integer plannedDurationSeconds,
+            LocalDateTime startTime,
+            String status,
+            String currentState) {
+        this(id, robotId, plannedDurationSeconds, startTime, status, currentState, false);
+    }
+
+    public SessionResponse(
+            UUID id,
+            UUID robotId,
+            Integer plannedDurationSeconds,
+            LocalDateTime startTime,
+            String status,
+            String currentState,
+            boolean explosionTriggered) {
         this.id = id;
         this.robotId = robotId;
         this.plannedDurationSeconds = plannedDurationSeconds;
         this.startTime = startTime;
         this.status = status;
+        this.currentState = currentState;
+        this.explosionTriggered = explosionTriggered;
     }
 
     public UUID getId() {
@@ -98,5 +134,21 @@ public class SessionResponse {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getCurrentState() {
+        return currentState;
+    }
+
+    public void setCurrentState(String currentState) {
+        this.currentState = currentState;
+    }
+
+    public boolean isExplosionTriggered() {
+        return explosionTriggered;
+    }
+
+    public void setExplosionTriggered(boolean explosionTriggered) {
+        this.explosionTriggered = explosionTriggered;
     }
 }

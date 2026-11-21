@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 import 'package:kaboom_app/core/network/api_client.dart';
 import 'package:kaboom_app/core/storage/token_storage.dart';
 import 'package:kaboom_app/shared/controllers/user_controller.dart';
 import 'package:kaboom_app/shared/models/user.dart';
 import 'package:kaboom_app/shared/services/user_service.dart';
 import 'package:kaboom_app/shared/widgets/app_drawer.dart';
-import 'package:provider/provider.dart';
 
 /// Returns the next coin balance each time, or throws when [fail] is true.
 class FakeUserService extends UserService {
@@ -23,37 +23,37 @@ class FakeUserService extends UserService {
 }
 
 void main() {
-  test('load fills the user and tells listeners', () async {
+  // GetX keeps registered controllers in memory between tests: clear them after each one.
+  tearDown(Get.reset);
+
+  test('load fills the user', () async {
     final controller = UserController(service: FakeUserService(120));
-    var notified = 0;
-    controller.addListener(() => notified++);
 
     await controller.load();
 
-    expect(controller.user?.coins, 120);
-    expect(notified, 1);
+    expect(controller.user.value?.coins, 120);
   });
 
-  test('refresh shows the new balance after a session', () async {
+  test('reload shows the new balance after a session', () async {
     final service = FakeUserService(120);
     final controller = UserController(service: service);
     await controller.load();
 
     service.coins = 145;
-    await controller.refresh();
+    await controller.reload();
 
-    expect(controller.user?.coins, 145);
+    expect(controller.user.value?.coins, 145);
   });
 
-  test('refresh keeps the old balance when the request fails', () async {
+  test('reload keeps the old balance when the request fails', () async {
     final service = FakeUserService(120);
     final controller = UserController(service: service);
     await controller.load();
 
     service.fail = true;
-    await controller.refresh();
+    await controller.reload();
 
-    expect(controller.user?.coins, 120);
+    expect(controller.user.value?.coins, 120);
   });
 
   test('clear forgets the user on log out', () async {
@@ -62,32 +62,29 @@ void main() {
 
     controller.clear();
 
-    expect(controller.user, isNull);
+    expect(controller.user.value, isNull);
   });
 
   testWidgets('the side menu shows the shared balance and updates it', (tester) async {
     final service = FakeUserService(120);
-    final controller = UserController(service: service);
+    final controller = Get.put(UserController(service: service));
     await controller.load();
     final scaffold = GlobalKey<ScaffoldState>();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: controller,
-        child: MaterialApp(home: Scaffold(key: scaffold, drawer: const AppDrawer())),
-      ),
+      MaterialApp(home: Scaffold(key: scaffold, drawer: const AppDrawer())),
     );
     scaffold.currentState!.openDrawer();
     await tester.pumpAndSettle();
     expect(find.text('120 coins'), findsOneWidget);
 
     service.coins = 145;
-    await controller.refresh();
+    await controller.reload();
     await tester.pump();
     expect(find.text('145 coins'), findsOneWidget);
   });
 
-  testWidgets('the side menu still works without the provider', (tester) async {
+  testWidgets('the side menu still works without a UserController', (tester) async {
     final scaffold = GlobalKey<ScaffoldState>();
     await tester.pumpWidget(
       MaterialApp(home: Scaffold(key: scaffold, drawer: const AppDrawer())),

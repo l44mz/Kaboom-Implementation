@@ -10,7 +10,8 @@ from kaboom_robot.vision.state_machine import Thresholds
 
 @dataclass(frozen=True)
 class CameraConfig:
-    source: str = "opencv"  # "opencv" (laptop or USB webcam) or "picamera2" (Pi Camera Module)
+    # "opencv" (laptop or USB webcam), "picamera2" or "rpicam" (Pi Camera Module)
+    source: str = "opencv"
     index: int = 0
     width: int = 640
     height: int = 480
@@ -24,9 +25,17 @@ class VisionConfig:
 
 
 @dataclass(frozen=True)
+class ApiConfig:
+    base_url: str = "http://localhost:8080/api/v1"  # the backend, as the robot sees it
+    robot_id: str = ""  # this robot's id in the backend's robots table
+    poll_s: float = 3.0  # how often to ask the backend for a session
+
+
+@dataclass(frozen=True)
 class RobotConfig:
     camera: CameraConfig = field(default_factory=CameraConfig)
     vision: VisionConfig = field(default_factory=VisionConfig)
+    api: ApiConfig = field(default_factory=ApiConfig)
 
 
 def _pick(cls, data: dict | None) -> dict:
@@ -47,7 +56,12 @@ def load_config(path: Path | None = None) -> RobotConfig:
         vision_args["model_path"] = Path(vision_args["model_path"])
     vision_args["thresholds"] = Thresholds(**_pick(Thresholds, vision.get("thresholds")))
 
+    api_args = _pick(ApiConfig, data.get("api"))
+    if "robot_id" in api_args:
+        api_args["robot_id"] = str(api_args["robot_id"] or "").strip()
+
     return RobotConfig(
         camera=CameraConfig(**_pick(CameraConfig, data.get("camera"))),
         vision=VisionConfig(**vision_args),
+        api=ApiConfig(**api_args),
     )

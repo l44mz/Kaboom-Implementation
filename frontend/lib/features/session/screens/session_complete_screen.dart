@@ -5,6 +5,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_drawer.dart';
+import '../../../shared/widgets/app_lottie.dart';
 import '../../../shared/widgets/robot_face.dart';
 import '../models/session_result.dart';
 
@@ -37,7 +38,7 @@ class SessionCompleteScreen extends StatelessWidget {
           ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
+              padding: const EdgeInsets.fromLTRB(32, 40, 32, 40),
               child: Column(
                 children: [
                   const RobotFace(
@@ -49,7 +50,7 @@ class SessionCompleteScreen extends StatelessWidget {
                   const Text(
                     'Good Job!',
                     style: TextStyle(
-                      fontSize: 34,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
                     ),
@@ -59,7 +60,7 @@ class SessionCompleteScreen extends StatelessWidget {
                     result != null && result.endedEarly
                         ? 'Session ended early'
                         : 'Focus Session Summary',
-                    style: const TextStyle(fontSize: 15, color: AppColors.textMuted),
+                    style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
                   ),
                   const SizedBox(height: 18),
                   _SummaryCard(result: result),
@@ -78,7 +79,7 @@ class SessionCompleteScreen extends StatelessWidget {
                       ),
                       child: const Text(
                         'Shop',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -97,12 +98,22 @@ class SessionCompleteScreen extends StatelessWidget {
                       ),
                       child: const Text(
                         'Back Home',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+          // Confetti bursts once over the top of the screen. IgnorePointer lets taps through.
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 420,
+            child: IgnorePointer(
+              child: AppLottie(AppAnimation.confetti, repeat: false),
             ),
           ),
         ],
@@ -123,7 +134,7 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 353),
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.field,
         borderRadius: BorderRadius.circular(16),
@@ -134,13 +145,13 @@ class _SummaryCard extends StatelessWidget {
         children: [
           const Text(
             'Time Focused',
-            style: TextStyle(fontSize: 18, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 16, color: AppColors.textMuted),
           ),
           const SizedBox(height: 2),
           Text(
             result?.timeFocusedLabel ?? '--',
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
@@ -151,13 +162,38 @@ class _SummaryCard extends StatelessWidget {
             child: Divider(height: 1, color: Color(0xFF3847A6)),
           ),
           const SizedBox(height: 14),
-          Center(child: _Coin(amount: result?.coinsEarned)),
+          // Gold rings and stars shine once behind the coin.
+          Center(
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                const SizedBox(
+                  width: 73,
+                  height: 73,
+                  child: OverflowBox(
+                    maxWidth: 160,
+                    maxHeight: 160,
+                    child: IgnorePointer(
+                      child: AppLottie(
+                        AppAnimation.coinShine,
+                        width: 160,
+                        height: 160,
+                        repeat: false,
+                      ),
+                    ),
+                  ),
+                ),
+                _Coin(amount: result?.coinsEarned),
+              ],
+            ),
+          ),
           const SizedBox(height: 6),
           const Center(
             child: Text(
               'Coins Earned',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
@@ -195,7 +231,7 @@ class _Coin extends StatelessWidget {
       child: Text(
         amount?.toString() ?? '--',
         style: AppTheme.numberStyle.copyWith(
-          fontSize: 28,
+          fontSize: 20,
           color: const Color(0xFF2A2A2A),
         ),
       ),

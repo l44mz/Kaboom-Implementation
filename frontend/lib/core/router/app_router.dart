@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/account/screens/account_screen.dart';
+import '../../features/admin/models/product.dart';
 import '../../features/admin/screens/add_product_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -24,6 +26,7 @@ class AppRoutes {
   static const history = '/history';
   static const admin = '/admin';
   static const addProduct = '/admin/products/new';
+  static const account = '/account';
 }
 
 final appRouter = GoRouter(
@@ -45,7 +48,12 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.shop, builder: (context, state) => const ShopScreen()),
     GoRoute(path: AppRoutes.robotPair, builder: (context, state) => const RobotPairingScreen()),
     GoRoute(path: AppRoutes.history, builder: (context, state) => const HistoryScreen()),
+    GoRoute(path: AppRoutes.account, builder: (context, state) => const AccountScreen()),
     GoRoute(path: AppRoutes.admin, builder: (context, state) => const AdminDashboardScreen()),
-    GoRoute(path: AppRoutes.addProduct, builder: (context, state) => const AddProductScreen()),
+    GoRoute(
+      path: AppRoutes.addProduct,
+      // extra = the product to edit, or null to add a new one
+      builder: (context, state) => AddProductScreen(product: state.extra as Product?),
+    ),
   ],
 );
