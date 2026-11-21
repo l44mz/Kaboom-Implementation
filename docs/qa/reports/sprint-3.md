@@ -6,7 +6,7 @@ Date: 2026-10-29 · Tested by: Lama · Build: develop at commit 3569e9c
 
 | Component | Command | Result |
 |---|---|---|
-| Backend | `./mvnw test` | 347 passed, 0 failed |
+| Backend | `./mvnw clean test` | 347 passed, 0 failed |
 
 ## Acceptance tests
 
