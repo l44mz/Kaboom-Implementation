@@ -5,6 +5,7 @@ import com.example.kaboom.dtos.ProductDto;
 import com.example.kaboom.entities.Product;
 import com.example.kaboom.repositories.ProductImageRepository;
 import com.example.kaboom.repositories.ProductRepository;
+import com.example.kaboom.repositories.PurchaseRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,9 @@ class ProductServiceTest {
 
     @Mock
     private ProductImageRepository productImageRepository;
+
+    @Mock
+    private PurchaseRepository purchaseRepository;
 
     @InjectMocks
     private ProductService productService;
