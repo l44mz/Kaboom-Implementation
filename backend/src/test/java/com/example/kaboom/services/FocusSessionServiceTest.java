@@ -1,3 +1,4 @@
+
 package com.example.kaboom.services;
 
 import com.example.kaboom.dtos.CreateSessionRequest;
@@ -21,10 +22,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -32,11 +35,17 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FocusSessionServiceTest {
 
-    @Mock private FocusSessionRepository focusSessionRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private RobotRepository robotRepository;
+    @Mock
+    private FocusSessionRepository focusSessionRepository;
 
-    @InjectMocks private FocusSessionService focusSessionService;
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private RobotRepository robotRepository;
+
+    @InjectMocks
+    private FocusSessionService focusSessionService;
 
     // ---------- helpers ----------
 
@@ -56,27 +65,35 @@ class FocusSessionServiceTest {
     private CreateSessionRequest request(UUID robotId, int plannedSeconds) {
         CreateSessionRequest request = mock(CreateSessionRequest.class);
         lenient().when(request.getRobotId()).thenReturn(robotId);
-        lenient().when(request.getPlannedDurationSeconds()).thenReturn(plannedSeconds);
+        lenient().when(request.getPlannedDurationSeconds())
+                .thenReturn(plannedSeconds);
         return request;
     }
 
     private FocusSession sessionWithStatus(
-            User user, FocusSession.SessionStatus status) {
+            User user,
+            FocusSession.SessionStatus status) {
+
         FocusSession session = new FocusSession(user, null, 1500);
         session.setStartTime(LocalDateTime.now().minusMinutes(10));
         session.setStatus(status);
         session.setPausedSeconds(0);
         session.setFocusedSeconds(0);
+
         return session;
     }
 
     private FocusSession sessionWithRobot(
-            User user, Robot robot, FocusSession.SessionStatus status) {
+            User user,
+            Robot robot,
+            FocusSession.SessionStatus status) {
+
         FocusSession session = new FocusSession(user, robot, 1500);
         session.setStartTime(LocalDateTime.now().minusMinutes(10));
         session.setStatus(status);
         session.setPausedSeconds(0);
         session.setFocusedSeconds(0);
+
         return session;
     }
 
@@ -86,18 +103,25 @@ class FocusSessionServiceTest {
     }
 
     private void assertStatus(
-            HttpStatus expected, ResponseStatusException ex) {
+            HttpStatus expected,
+            ResponseStatusException ex) {
+
         assertEquals(expected, ex.getStatusCode());
     }
 
     private void assertBetween(int min, int max, int actual) {
-        assertTrue(actual >= min && actual <= max,
+        assertTrue(
+                actual >= min && actual <= max,
                 "expected a value between " + min + " and " + max
-                        + " but was " + actual);
+                        + " but was " + actual
+        );
     }
 
     private FocusStateRequest stateRequest(
-            UUID sessionId, FocusState state, long sequenceNumber) {
+            UUID sessionId,
+            FocusState state,
+            long sequenceNumber) {
+
         FocusStateRequest request = mock(FocusStateRequest.class);
 
         lenient().when(request.sessionId()).thenReturn(sessionId);
@@ -115,9 +139,12 @@ class FocusSessionServiceTest {
         User user = userWithId(userId);
         CreateSessionRequest request = request(null, 1500);
 
+        when(userRepository.findByIdForUpdate(userId))
+                .thenReturn(Optional.of(user));
+
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+
         saveReturnsArgument();
 
         SessionResponse result =
@@ -137,6 +164,7 @@ class FocusSessionServiceTest {
         assertSame(user, saved.getUser());
         assertNull(saved.getRobot());
 
+        verify(userRepository).findByIdForUpdate(userId);
         verify(robotRepository).findByUserId(userId);
         verify(robotRepository, never()).findById(any());
     }
@@ -150,10 +178,15 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
         CreateSessionRequest request = request(robotId, 1500);
 
+        when(userRepository.findByIdForUpdate(userId))
+                .thenReturn(Optional.of(user));
+
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(robotRepository.findById(robotId)).thenReturn(Optional.of(robot));
+
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.of(robot));
+
         saveReturnsArgument();
 
         SessionResponse result =
@@ -165,23 +198,31 @@ class FocusSessionServiceTest {
                 ArgumentCaptor.forClass(FocusSession.class);
 
         verify(focusSessionRepository).save(captor.capture());
+
         assertSame(robot, captor.getValue().getRobot());
+        verify(userRepository).findByIdForUpdate(userId);
     }
 
     @Test
     void startSession_userAlreadyHasActiveOrPausedSession_throwsConflict() {
         UUID userId = UUID.randomUUID();
+        User user = userWithId(userId);
         CreateSessionRequest request = request(null, 1500);
+
+        when(userRepository.findByIdForUpdate(userId))
+                .thenReturn(Optional.of(user));
 
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.of(mock(FocusSession.class)));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> focusSessionService.startSession(userId, request));
+                () -> focusSessionService.startSession(userId, request)
+        );
 
         assertStatus(HttpStatus.CONFLICT, ex);
-        verifyNoInteractions(userRepository);
+
+        verify(userRepository).findByIdForUpdate(userId);
         verify(focusSessionRepository, never()).save(any());
     }
 
@@ -189,16 +230,23 @@ class FocusSessionServiceTest {
     void startSession_userNotFound_throwsNotFound() {
         UUID userId = UUID.randomUUID();
 
-        when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
+        when(userRepository.findByIdForUpdate(userId))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.startSession(
-                        userId, request(null, 1500)));
+                        userId,
+                        request(null, 1500)
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
+
+        verify(userRepository).findByIdForUpdate(userId);
+        verify(focusSessionRepository, never())
+                .findActiveOrPausedSessionByUserId(any());
+        verify(focusSessionRepository, never()).save(any());
     }
 
     @Test
@@ -208,15 +256,22 @@ class FocusSessionServiceTest {
 
         User user = userWithId(userId);
 
+        when(userRepository.findByIdForUpdate(userId))
+                .thenReturn(Optional.of(user));
+
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(robotRepository.findById(robotId)).thenReturn(Optional.empty());
+
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.startSession(
-                        userId, request(robotId, 1500)));
+                        userId,
+                        request(robotId, 1500)
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -231,15 +286,22 @@ class FocusSessionServiceTest {
         User otherUser = userWithId(UUID.randomUUID());
         Robot robot = robotOwnedBy(robotId, otherUser);
 
+        when(userRepository.findByIdForUpdate(userId))
+                .thenReturn(Optional.of(user));
+
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(robotRepository.findById(robotId)).thenReturn(Optional.of(robot));
+
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.of(robot));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.startSession(
-                        userId, request(robotId, 1500)));
+                        userId,
+                        request(robotId, 1500)
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -253,17 +315,25 @@ class FocusSessionServiceTest {
         User user = userWithId(userId);
         Robot robot = robotOwnedBy(robotId, null);
 
+        when(userRepository.findByIdForUpdate(userId))
+                .thenReturn(Optional.of(user));
+
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(robotRepository.findById(robotId)).thenReturn(Optional.of(robot));
+
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.of(robot));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.startSession(
-                        userId, request(robotId, 1500)));
+                        userId,
+                        request(robotId, 1500)
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
+        verify(focusSessionRepository, never()).save(any());
     }
 
     // ---------- startSessionForRobot ----------
@@ -276,14 +346,19 @@ class FocusSessionServiceTest {
         User user = userWithId(userId);
         Robot robot = robotOwnedBy(robotId, user);
 
-        when(robotRepository.findById(robotId)).thenReturn(Optional.of(robot));
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.of(robot));
+
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.empty());
 
         saveReturnsArgument();
 
-        SessionResponse result = focusSessionService.startSessionForRobot(
-                robotId, request(null, 1500));
+        SessionResponse result =
+                focusSessionService.startSessionForRobot(
+                        robotId,
+                        request(null, 1500)
+                );
 
         assertNotNull(result);
 
@@ -294,21 +369,27 @@ class FocusSessionServiceTest {
 
         assertSame(user, captor.getValue().getUser());
         assertSame(robot, captor.getValue().getRobot());
+
         assertEquals(
                 FocusSession.SessionStatus.active,
-                captor.getValue().getStatus());
+                captor.getValue().getStatus()
+        );
     }
 
     @Test
     void startSessionForRobot_robotNotFound_throwsNotFound() {
         UUID robotId = UUID.randomUUID();
 
-        when(robotRepository.findById(robotId)).thenReturn(Optional.empty());
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.startSessionForRobot(
-                        robotId, request(null, 1500)));
+                        robotId,
+                        request(null, 1500)
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -319,12 +400,16 @@ class FocusSessionServiceTest {
         UUID robotId = UUID.randomUUID();
         Robot robot = robotOwnedBy(robotId, null);
 
-        when(robotRepository.findById(robotId)).thenReturn(Optional.of(robot));
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.of(robot));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.startSessionForRobot(
-                        robotId, request(null, 1500)));
+                        robotId,
+                        request(null, 1500)
+                )
+        );
 
         assertStatus(HttpStatus.CONFLICT, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -338,14 +423,19 @@ class FocusSessionServiceTest {
         User user = userWithId(userId);
         Robot robot = robotOwnedBy(robotId, user);
 
-        when(robotRepository.findById(robotId)).thenReturn(Optional.of(robot));
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.of(robot));
+
         when(focusSessionRepository.findActiveOrPausedSessionByUserId(userId))
                 .thenReturn(Optional.of(mock(FocusSession.class)));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.startSessionForRobot(
-                        robotId, request(null, 1500)));
+                        robotId,
+                        request(null, 1500)
+                )
+        );
 
         assertStatus(HttpStatus.CONFLICT, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -359,9 +449,11 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User user = userWithId(userId);
+
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.active);
 
+        // getSession uses findById(), not findByIdForUpdate().
         when(focusSessionRepository.findById(sessionId))
                 .thenReturn(Optional.of(session));
 
@@ -381,7 +473,10 @@ class FocusSessionServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.getSession(
-                        UUID.randomUUID(), sessionId));
+                        UUID.randomUUID(),
+                        sessionId
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
     }
@@ -391,6 +486,7 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User owner = userWithId(UUID.randomUUID());
+
         FocusSession session =
                 sessionWithStatus(owner, FocusSession.SessionStatus.active);
 
@@ -400,7 +496,10 @@ class FocusSessionServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.getSession(
-                        UUID.randomUUID(), sessionId));
+                        UUID.randomUUID(),
+                        sessionId
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
     }
@@ -413,6 +512,7 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User user = userWithId(userId);
+
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.active);
 
@@ -437,6 +537,7 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User user = userWithId(userId);
+
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.paused);
 
@@ -445,7 +546,8 @@ class FocusSessionServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> focusSessionService.pauseSession(userId, sessionId));
+                () -> focusSessionService.pauseSession(userId, sessionId)
+        );
 
         assertStatus(HttpStatus.CONFLICT, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -461,7 +563,10 @@ class FocusSessionServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.pauseSession(
-                        UUID.randomUUID(), sessionId));
+                        UUID.randomUUID(),
+                        sessionId
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
     }
@@ -471,6 +576,7 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User owner = userWithId(UUID.randomUUID());
+
         FocusSession session =
                 sessionWithStatus(owner, FocusSession.SessionStatus.active);
 
@@ -480,7 +586,10 @@ class FocusSessionServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.pauseSession(
-                        UUID.randomUUID(), sessionId));
+                        UUID.randomUUID(),
+                        sessionId
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
         assertEquals(FocusSession.SessionStatus.active, session.getStatus());
@@ -495,6 +604,7 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User user = userWithId(userId);
+
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.paused);
 
@@ -521,6 +631,7 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User user = userWithId(userId);
+
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.paused);
 
@@ -544,6 +655,7 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User user = userWithId(userId);
+
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.active);
 
@@ -552,7 +664,8 @@ class FocusSessionServiceTest {
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> focusSessionService.resumeSession(userId, sessionId));
+                () -> focusSessionService.resumeSession(userId, sessionId)
+        );
 
         assertStatus(HttpStatus.CONFLICT, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -568,7 +681,10 @@ class FocusSessionServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.resumeSession(
-                        UUID.randomUUID(), sessionId));
+                        UUID.randomUUID(),
+                        sessionId
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
     }
@@ -589,7 +705,7 @@ class FocusSessionServiceTest {
         session.setStartTime(LocalDateTime.now().minusHours(1));
         session.setFocusedSeconds(600);
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         EndSessionResponse result =
@@ -598,7 +714,13 @@ class FocusSessionServiceTest {
         assertNotNull(result);
         assertEquals(FocusSession.SessionStatus.completed, session.getStatus());
         assertNotNull(session.getEndTime());
-        assertBetween(3600, 3602, (int) session.getDurationSeconds());
+
+        assertBetween(
+                3600,
+                3602,
+                (int) session.getDurationSeconds()
+        );
+
         assertEquals(600, (int) session.getFocusedSeconds());
         assertEquals(16.67f, session.getFocusedPercentage(), 0.1f);
         assertEquals(10, (int) session.getRewardEarned());
@@ -622,7 +744,7 @@ class FocusSessionServiceTest {
         session.setStartTime(LocalDateTime.now().minusHours(2));
         session.setFocusedSeconds(6000);
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.endSession(userId, sessionId);
@@ -645,14 +767,15 @@ class FocusSessionServiceTest {
         session.setStartTime(LocalDateTime.now().minusMinutes(10));
         session.setFocusedSeconds(5000);
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.endSession(userId, sessionId);
 
         assertEquals(
                 (int) session.getDurationSeconds(),
-                (int) session.getFocusedSeconds());
+                (int) session.getFocusedSeconds()
+        );
 
         assertEquals(100f, session.getFocusedPercentage(), 0.01f);
     }
@@ -668,7 +791,7 @@ class FocusSessionServiceTest {
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.active);
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.endSession(userId, sessionId);
@@ -692,14 +815,18 @@ class FocusSessionServiceTest {
         session.setStartTime(LocalDateTime.now().minusMinutes(10));
         session.setPauseStartedAt(LocalDateTime.now().minusMinutes(5));
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.endSession(userId, sessionId);
 
         assertBetween(300, 302, (int) session.getPausedSeconds());
         assertNull(session.getPauseStartedAt());
-        assertEquals(FocusSession.SessionStatus.completed, session.getStatus());
+
+        assertEquals(
+                FocusSession.SessionStatus.completed,
+                session.getStatus()
+        );
     }
 
     @Test
@@ -708,15 +835,17 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User user = userWithId(userId);
+
         FocusSession session =
                 sessionWithStatus(user, FocusSession.SessionStatus.completed);
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> focusSessionService.endSession(userId, sessionId));
+                () -> focusSessionService.endSession(userId, sessionId)
+        );
 
         assertStatus(HttpStatus.CONFLICT, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -727,13 +856,16 @@ class FocusSessionServiceTest {
     void endSession_sessionNotFound_throwsNotFound() {
         UUID sessionId = UUID.randomUUID();
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.endSession(
-                        UUID.randomUUID(), sessionId));
+                        UUID.randomUUID(),
+                        sessionId
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
     }
@@ -743,18 +875,23 @@ class FocusSessionServiceTest {
         UUID sessionId = UUID.randomUUID();
 
         User owner = userWithId(UUID.randomUUID());
+
         FocusSession session =
                 sessionWithStatus(owner, FocusSession.SessionStatus.active);
 
-        when(focusSessionRepository.findById(sessionId))
+        when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.endSession(
-                        UUID.randomUUID(), sessionId));
+                        UUID.randomUUID(),
+                        sessionId
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
+
         verify(userRepository, never()).save(any());
         verify(owner, never()).setCoins(anyInt());
     }
@@ -770,19 +907,26 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
-        when(robotRepository.findById(robotId)).thenReturn(Optional.of(robot));
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.of(robot));
 
         when(focusSessionRepository
                 .findFirstByRobot_IdAndStatusInOrderByStartTimeDesc(
-                        eq(robotId), anyList()))
+                        eq(robotId),
+                        anyList()
+                ))
                 .thenReturn(Optional.of(session));
 
         Optional<SessionResponse> result =
                 focusSessionService.getActiveSessionForRobot(robotId);
 
         assertTrue(result.isPresent());
+
         verify(robot).setLastSeenAt(any(LocalDateTime.class));
         verify(robotRepository).save(robot);
     }
@@ -791,11 +935,14 @@ class FocusSessionServiceTest {
     void getActiveSessionForRobot_noSession_returnsEmpty() {
         UUID robotId = UUID.randomUUID();
 
-        when(robotRepository.findById(robotId)).thenReturn(Optional.empty());
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.empty());
 
         when(focusSessionRepository
                 .findFirstByRobot_IdAndStatusInOrderByStartTimeDesc(
-                        eq(robotId), anyList()))
+                        eq(robotId),
+                        anyList()
+                ))
                 .thenReturn(Optional.empty());
 
         Optional<SessionResponse> result =
@@ -808,15 +955,21 @@ class FocusSessionServiceTest {
     void getActiveSessionForRobot_robotNotFound_stillChecksSession() {
         UUID robotId = UUID.randomUUID();
 
-        when(robotRepository.findById(robotId)).thenReturn(Optional.empty());
+        when(robotRepository.findById(robotId))
+                .thenReturn(Optional.empty());
 
         when(focusSessionRepository
                 .findFirstByRobot_IdAndStatusInOrderByStartTimeDesc(
-                        eq(robotId), anyList()))
+                        eq(robotId),
+                        anyList()
+                ))
                 .thenReturn(Optional.empty());
 
         assertTrue(
-                focusSessionService.getActiveSessionForRobot(robotId).isEmpty());
+                focusSessionService
+                        .getActiveSessionForRobot(robotId)
+                        .isEmpty()
+        );
 
         verify(robotRepository, never()).save(any());
     }
@@ -832,7 +985,10 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
@@ -850,6 +1006,7 @@ class FocusSessionServiceTest {
         verify(robot).setCurrentExpression(Robot.Expression.smile);
         verify(robot).setConnectionState(Robot.ConnectionState.connected);
         verify(robot).setLastSeenAt(any(LocalDateTime.class));
+
         verify(focusSessionRepository).save(session);
     }
 
@@ -862,14 +1019,18 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.recordState(
                 robotId,
-                stateRequest(sessionId, FocusState.DISTRACTED, 1));
+                stateRequest(sessionId, FocusState.DISTRACTED, 1)
+        );
 
         assertEquals(1, session.getDistractionCount());
         assertEquals(FocusState.DISTRACTED, session.getCurrentState());
@@ -884,18 +1045,23 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.recordState(
                 robotId,
-                stateRequest(sessionId, FocusState.DISTRACTED, 1));
+                stateRequest(sessionId, FocusState.DISTRACTED, 1)
+        );
 
         focusSessionService.recordState(
                 robotId,
-                stateRequest(sessionId, FocusState.DISTRACTED, 2));
+                stateRequest(sessionId, FocusState.DISTRACTED, 2)
+        );
 
         assertEquals(1, session.getDistractionCount());
     }
@@ -909,14 +1075,18 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.recordState(
                 robotId,
-                stateRequest(sessionId, FocusState.AWAY, 1));
+                stateRequest(sessionId, FocusState.AWAY, 1)
+        );
 
         assertEquals(1, session.getAwayCount());
         assertEquals(FocusState.AWAY, session.getCurrentState());
@@ -931,31 +1101,48 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.DISTRACTED, 1));
+                robotId,
+                stateRequest(sessionId, FocusState.DISTRACTED, 1)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.FOCUSED, 2));
+                robotId,
+                stateRequest(sessionId, FocusState.FOCUSED, 2)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.DISTRACTED, 3));
+                robotId,
+                stateRequest(sessionId, FocusState.DISTRACTED, 3)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.FOCUSED, 4));
+                robotId,
+                stateRequest(sessionId, FocusState.FOCUSED, 4)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.DISTRACTED, 5));
+                robotId,
+                stateRequest(sessionId, FocusState.DISTRACTED, 5)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.FOCUSED, 6));
+                robotId,
+                stateRequest(sessionId, FocusState.FOCUSED, 6)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.DISTRACTED, 7));
+                robotId,
+                stateRequest(sessionId, FocusState.DISTRACTED, 7)
+        );
 
         assertEquals(4, session.getDistractionCount());
         assertTrue(session.isExplosionTriggered());
@@ -970,19 +1157,28 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.AWAY, 1));
+                robotId,
+                stateRequest(sessionId, FocusState.AWAY, 1)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.FOCUSED, 2));
+                robotId,
+                stateRequest(sessionId, FocusState.FOCUSED, 2)
+        );
 
         focusSessionService.recordState(
-                robotId, stateRequest(sessionId, FocusState.AWAY, 3));
+                robotId,
+                stateRequest(sessionId, FocusState.AWAY, 3)
+        );
 
         assertEquals(2, session.getAwayCount());
         assertTrue(session.isExplosionTriggered());
@@ -997,7 +1193,10 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         session.setLastSequenceNumber(5);
         session.setCurrentState(FocusState.FOCUSED);
@@ -1007,7 +1206,8 @@ class FocusSessionServiceTest {
 
         FocusStateResponse result = focusSessionService.recordState(
                 robotId,
-                stateRequest(sessionId, FocusState.DISTRACTED, 4));
+                stateRequest(sessionId, FocusState.DISTRACTED, 4)
+        );
 
         assertNotNull(result);
         assertEquals(FocusState.FOCUSED, session.getCurrentState());
@@ -1026,17 +1226,22 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(robotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.paused);
+                user,
+                robot,
+                FocusSession.SessionStatus.paused
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
 
         FocusStateResponse result = focusSessionService.recordState(
                 robotId,
-                stateRequest(sessionId, FocusState.DISTRACTED, 1));
+                stateRequest(sessionId, FocusState.DISTRACTED, 1)
+        );
 
         assertNotNull(result);
         assertEquals(0, session.getDistractionCount());
+
         verify(focusSessionRepository, never()).save(any());
     }
 
@@ -1050,7 +1255,10 @@ class FocusSessionServiceTest {
         Robot robot = robotOwnedBy(otherRobotId, user);
 
         FocusSession session = sessionWithRobot(
-                user, robot, FocusSession.SessionStatus.active);
+                user,
+                robot,
+                FocusSession.SessionStatus.active
+        );
 
         when(focusSessionRepository.findByIdForUpdate(sessionId))
                 .thenReturn(Optional.of(session));
@@ -1059,7 +1267,9 @@ class FocusSessionServiceTest {
                 ResponseStatusException.class,
                 () -> focusSessionService.recordState(
                         robotId,
-                        stateRequest(sessionId, FocusState.FOCUSED, 1)));
+                        stateRequest(sessionId, FocusState.FOCUSED, 1)
+                )
+        );
 
         assertStatus(HttpStatus.FORBIDDEN, ex);
         verify(focusSessionRepository, never()).save(any());
@@ -1077,7 +1287,9 @@ class FocusSessionServiceTest {
                 ResponseStatusException.class,
                 () -> focusSessionService.recordState(
                         robotId,
-                        stateRequest(sessionId, FocusState.FOCUSED, 1)));
+                        stateRequest(sessionId, FocusState.FOCUSED, 1)
+                )
+        );
 
         assertStatus(HttpStatus.NOT_FOUND, ex);
     }
@@ -1092,18 +1304,21 @@ class FocusSessionServiceTest {
                 .findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
                         eq(userId),
                         eq(FocusSession.SessionStatus.completed),
-                        any(LocalDateTime.class)))
+                        any(LocalDateTime.class)
+                ))
                 .thenReturn(List.of());
 
         HistoryResponse result =
                 focusSessionService.getHistory(userId, "day");
 
         assertNotNull(result);
+
         verify(focusSessionRepository)
                 .findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
                         eq(userId),
                         eq(FocusSession.SessionStatus.completed),
-                        any(LocalDateTime.class));
+                        any(LocalDateTime.class)
+                );
     }
 
     @Test
@@ -1114,7 +1329,8 @@ class FocusSessionServiceTest {
                 .findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
                         eq(userId),
                         eq(FocusSession.SessionStatus.completed),
-                        any(LocalDateTime.class)))
+                        any(LocalDateTime.class)
+                ))
                 .thenReturn(List.of());
 
         HistoryResponse result =
@@ -1131,7 +1347,8 @@ class FocusSessionServiceTest {
                 .findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
                         eq(userId),
                         eq(FocusSession.SessionStatus.completed),
-                        any(LocalDateTime.class)))
+                        any(LocalDateTime.class)
+                ))
                 .thenReturn(List.of());
 
         HistoryResponse result =
@@ -1146,7 +1363,9 @@ class FocusSessionServiceTest {
 
         when(focusSessionRepository
                 .findByUser_IdAndStatusOrderByStartTimeDesc(
-                        userId, FocusSession.SessionStatus.completed))
+                        userId,
+                        FocusSession.SessionStatus.completed
+                ))
                 .thenReturn(List.of());
 
         HistoryResponse result =
@@ -1156,7 +1375,9 @@ class FocusSessionServiceTest {
 
         verify(focusSessionRepository)
                 .findByUser_IdAndStatusOrderByStartTimeDesc(
-                        userId, FocusSession.SessionStatus.completed);
+                        userId,
+                        FocusSession.SessionStatus.completed
+                );
     }
 
     @Test
@@ -1167,7 +1388,8 @@ class FocusSessionServiceTest {
                 .findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
                         eq(userId),
                         eq(FocusSession.SessionStatus.completed),
-                        any(LocalDateTime.class)))
+                        any(LocalDateTime.class)
+                ))
                 .thenReturn(List.of());
 
         HistoryResponse result =
@@ -1181,7 +1403,10 @@ class FocusSessionServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> focusSessionService.getHistory(
-                        UUID.randomUUID(), "invalid"));
+                        UUID.randomUUID(),
+                        "invalid"
+                )
+        );
 
         assertStatus(HttpStatus.BAD_REQUEST, ex);
     }
@@ -1194,7 +1419,8 @@ class FocusSessionServiceTest {
                 .findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
                         eq(userId),
                         eq(FocusSession.SessionStatus.completed),
-                        any(LocalDateTime.class)))
+                        any(LocalDateTime.class)
+                ))
                 .thenReturn(List.of());
 
         HistoryResponse result =
@@ -1203,3 +1429,4 @@ class FocusSessionServiceTest {
         assertNotNull(result);
     }
 }
+

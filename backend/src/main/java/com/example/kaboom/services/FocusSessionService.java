@@ -64,11 +64,13 @@ public class FocusSessionService {
             UUID userId,
             CreateSessionRequest request) {
 
-        ensureNoOpenSession(userId);
-
-        User user = userRepository.findById(userId)
+        // Lock the user first to prevent concurrent session creation.
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
+
+        // Check for an existing open session while holding the lock.
+        ensureNoOpenSession(userId);
 
         Robot robot;
 
@@ -83,7 +85,6 @@ public class FocusSessionService {
                         HttpStatus.NOT_FOUND, "Robot not found");
             }
         } else {
-            // No robot chosen in the app: use the user's robot, or none.
             robot = robotRepository.findByUserId(userId)
                     .stream()
                     .findFirst()
@@ -191,7 +192,16 @@ public class FocusSessionService {
      */
     @Transactional
     public EndSessionResponse endSession(UUID userId, UUID sessionId) {
-        FocusSession session = getOwnedSession(userId, sessionId);
+
+        FocusSession session = focusSessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Session not found"));
+
+        // Verify ownership
+        if (!session.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Session not found");
+        }
 
         if (session.getStatus() == FocusSession.SessionStatus.completed) {
             throw new ResponseStatusException(
@@ -202,11 +212,9 @@ public class FocusSessionService {
         LocalDateTime now = LocalDateTime.now();
 
         if (session.getStatus() == FocusSession.SessionStatus.active) {
-            // Credit the last few seconds since the robot's final report.
             accrueTime(session, now);
         }
 
-        // Include the current pause if the session is still paused.
         if (session.getStatus() == FocusSession.SessionStatus.paused
                 && session.getPauseStartedAt() != null) {
 

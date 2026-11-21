@@ -1,4 +1,3 @@
-
 package com.example.kaboom.services;
 
 import com.example.kaboom.dtos.PairingCodeResponse;
