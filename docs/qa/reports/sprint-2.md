@@ -1,11 +1,12 @@
 # Sprint 2 QA report
 
-Date: 2026-10-22 · Tested by: Lama · Build: develop at commit 25d32ca
+Date: 2026-10-22 · Tested by: Lama · Build: develop at commit f00aded
+
 
 ## Automated tests
 | Component | Command | Result |
 | --- | --- | --- |
-| Backend | ./mvnw clean test | 169 passed, 0 failed |
+| Backend | ./mvnw clean test | 314 passed, 0 failed |
 
 ## Acceptance Tests
 | Story | Result | Notes or bug link |
