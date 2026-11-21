@@ -9,7 +9,11 @@ import org.testcontainers.mysql.MySQLContainer;
 @AutoConfigureTestRestTemplate
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.jpa.hibernate.ddl-auto=create-drop"
+        properties = {
+                "spring.jpa.hibernate.ddl-auto=create-drop",
+                "spring.web.error.include-message=always",
+                "spring.web.error.include-binding-errors=always"
+        }
 )
 abstract class AbstractIntegrationTest {
 

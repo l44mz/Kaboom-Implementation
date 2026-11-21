@@ -5,25 +5,37 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.http.*;
-
 import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class UserControllerIntegrationTest extends AbstractIntegrationTest {
 
     private static final String AUTH_URL = "/api/v1/auth";
     private static final String USERS_URL = "/api/v1/users";
-    private static final String PASSWORD = "SecurePass123";
+    private static final String PASSWORD = "SecurePass123!";
+    private static final String NEW_PASSWORD = "NewSecurePass456!";
 
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private TestRestTemplate restTemplate;
+    @Autowired private UserRepository userRepository;
 
 
-    // 1. GET /users/{id} requires authentication
+    // GET /users/me
+
+    @Test
+    void shouldReturnOwnProfile() {
+
+        String email = registerUser();
+        String token = login(email, PASSWORD);
+
+        ResponseEntity<String> response = send(HttpMethod.GET, USERS_URL + "/me", null, token);
+
+        assertStatus(HttpStatus.OK, response);
+        assertTrue(response.getBody().contains(email));
+        assertFalse(response.getBody().toLowerCase().contains("passwordhash"));
+    }
+
+
+    // GET /users/{id}
 
     @Test
     void shouldRequireAuthenticationForGetUserById() {
@@ -31,11 +43,8 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> response =
                 send(HttpMethod.GET, USERS_URL + "/" + UUID.randomUUID(), null, null);
 
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertStatus(HttpStatus.UNAUTHORIZED, response);
     }
-
-
-    // 2. GET /users/{id} must never leak the password hash (even for your own id)
 
     @Test
     void shouldNotLeakPasswordHashFromGetUserById() {
@@ -47,11 +56,9 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
         ResponseEntity<String> response =
                 send(HttpMethod.GET, USERS_URL + "/" + id, null, token);
 
-        assertFalse(String.valueOf(response.getBody()).toLowerCase().contains("passwordhash"));
+        assertFalse(String.valueOf(response.getBody()).toLowerCase().contains("passwordhash"),
+                "response leaked the hash: " + response.getBody());
     }
-
-
-    // 3. A user must not be able to read another user's account
 
     @Test
     void shouldNotAllowUserToReadAnotherUser() {
@@ -67,13 +74,34 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
         assertTrue(
                 response.getStatusCode() == HttpStatus.FORBIDDEN
                         || response.getStatusCode() == HttpStatus.NOT_FOUND,
-                "Expected 403 or 404 but got " + response.getStatusCode()
+                "Expected 403 or 404 but got " + response.getStatusCode() + ": " + response.getBody()
         );
         assertFalse(String.valueOf(response.getBody()).contains(emailB));
     }
 
 
-    // 4. Update profile: email already taken
+    // PUT /users/me
+
+    @Test
+    void shouldUpdateOwnProfile() {
+
+        String email = registerUser();
+        String token = login(email, PASSWORD);
+
+        String request = """
+                {
+                    "name": "Updated Name",
+                    "email": "%s"
+                }
+                """.formatted(email);
+
+        ResponseEntity<String> response =
+                send(HttpMethod.PUT, USERS_URL + "/me", request, token);
+
+        assertStatus(HttpStatus.OK, response);
+        assertEquals("Updated Name",
+                userRepository.findByEmail(email).orElseThrow().getName());
+    }
 
     @Test
     void shouldRejectProfileUpdateWithTakenEmail() {
@@ -89,20 +117,14 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 }
                 """.formatted(emailA);
 
-        ResponseEntity<String> response =
-                send(HttpMethod.PUT, USERS_URL + "/me", request, tokenB);
-
-        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertStatus(HttpStatus.CONFLICT,
+                send(HttpMethod.PUT, USERS_URL + "/me", request, tokenB));
     }
-
-
-    // 5. Update profile: invalid data
 
     @Test
     void shouldRejectInvalidProfileUpdate() {
 
-        String email = registerUser();
-        String token = login(email, PASSWORD);
+        String token = login(registerUser(), PASSWORD);
 
         String request = """
                 {
@@ -111,36 +133,45 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 }
                 """;
 
-        ResponseEntity<String> response =
-                send(HttpMethod.PUT, USERS_URL + "/me", request, token);
+        assertStatus(HttpStatus.BAD_REQUEST,
+                send(HttpMethod.PUT, USERS_URL + "/me", request, token));
+    }
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    @Test
+    void shouldRequireAuthenticationToUpdateProfile() {
+
+        String request = """
+                {
+                    "name": "Name",
+                    "email": "someone@example.com"
+                }
+                """;
+
+        assertStatus(HttpStatus.UNAUTHORIZED,
+                send(HttpMethod.PUT, USERS_URL + "/me", request, null));
     }
 
 
-    // 6. Change password: wrong current password
+    // PUT /users/me/password
 
     @Test
     void shouldRejectPasswordChangeWithWrongCurrentPassword() {
 
-        String email = registerUser();
-        String token = login(email, PASSWORD);
+        String token = login(registerUser(), PASSWORD);
 
-        String request = """
-                {
-                    "currentPassword": "WrongPassword123",
-                    "newPassword": "NewSecurePass456"
-                }
-                """;
-
-        ResponseEntity<String> response =
-                send(HttpMethod.PUT, USERS_URL + "/me/password", request, token);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertStatus(HttpStatus.BAD_REQUEST,
+                changePassword(token, "WrongPassword123!", NEW_PASSWORD));
     }
 
+    @Test
+    void shouldRejectPasswordChangeToWeakPassword() {
 
-    // 7. Change password: success, new password works and old one does not
+        String token = login(registerUser(), PASSWORD);
+
+        // violates the 12-character minimum used at registration
+        assertStatus(HttpStatus.BAD_REQUEST,
+                changePassword(token, PASSWORD, "short1!A"));
+    }
 
     @Test
     void shouldChangePasswordSuccessfully() {
@@ -148,24 +179,14 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
         String email = registerUser();
         String token = login(email, PASSWORD);
 
-        String request = """
-                {
-                    "currentPassword": "%s",
-                    "newPassword": "NewSecurePass456"
-                }
-                """.formatted(PASSWORD);
+        assertStatus(HttpStatus.OK, changePassword(token, PASSWORD, NEW_PASSWORD));
 
-        ResponseEntity<String> response =
-                send(HttpMethod.PUT, USERS_URL + "/me/password", request, token);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-
-        assertEquals(HttpStatus.OK, loginRaw(email, "NewSecurePass456").getStatusCode());
+        assertEquals(HttpStatus.OK, loginRaw(email, NEW_PASSWORD).getStatusCode());
         assertEquals(HttpStatus.UNAUTHORIZED, loginRaw(email, PASSWORD).getStatusCode());
     }
 
 
-    // 8. Delete account: user is gone and cannot log in again
+    // DELETE /users/me
 
     @Test
     void shouldDeleteOwnAccount() {
@@ -173,38 +194,31 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
         String email = registerUser();
         String token = login(email, PASSWORD);
 
-        ResponseEntity<String> response =
-                send(HttpMethod.DELETE, USERS_URL + "/me", null, token);
+        assertStatus(HttpStatus.OK, send(HttpMethod.DELETE, USERS_URL + "/me", null, token));
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(userRepository.findByEmail(email).isEmpty());
         assertEquals(HttpStatus.UNAUTHORIZED, loginRaw(email, PASSWORD).getStatusCode());
     }
 
 
-    // 9. A new user owns no items
+    // GET /users/me/items and PATCH /users/me/items/{id}
 
     @Test
     void shouldReturnEmptyItemListForNewUser() {
 
-        String email = registerUser();
-        String token = login(email, PASSWORD);
+        String token = login(registerUser(), PASSWORD);
 
         ResponseEntity<String> response =
                 send(HttpMethod.GET, USERS_URL + "/me/items", null, token);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertStatus(HttpStatus.OK, response);
         assertEquals("[]", response.getBody().trim());
     }
-
-
-    // 10. Equipping an item the user does not own
 
     @Test
     void shouldReturn404WhenEquippingItemNotOwned() {
 
-        String email = registerUser();
-        String token = login(email, PASSWORD);
+        String token = login(registerUser(), PASSWORD);
 
         ResponseEntity<String> response = send(
                 HttpMethod.PATCH,
@@ -213,11 +227,27 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 token
         );
 
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertStatus(HttpStatus.NOT_FOUND, response);
     }
 
 
     // Helpers
+
+    private void assertStatus(HttpStatus expected, ResponseEntity<String> response) {
+        assertEquals(expected, response.getStatusCode(), response.getBody());
+    }
+
+    private ResponseEntity<String> changePassword(String token, String current, String next) {
+
+        String request = """
+                {
+                    "currentPassword": "%s",
+                    "newPassword": "%s"
+                }
+                """.formatted(current, next);
+
+        return send(HttpMethod.PUT, USERS_URL + "/me/password", request, token);
+    }
 
     private String registerUser() {
 
@@ -231,10 +261,7 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
                 }
                 """.formatted(email, PASSWORD);
 
-        ResponseEntity<String> response =
-                send(HttpMethod.POST, AUTH_URL + "/register", body, null);
-
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertStatus(HttpStatus.CREATED, send(HttpMethod.POST, AUTH_URL + "/register", body, null));
         return email;
     }
 
@@ -254,7 +281,7 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
 
         ResponseEntity<String> response = loginRaw(email, password);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertStatus(HttpStatus.OK, response);
         assertNotNull(response.getBody());
 
         return extractJsonValue(response.getBody(), "accessToken");
@@ -269,21 +296,14 @@ class UserControllerIntegrationTest extends AbstractIntegrationTest {
             headers.setBearerAuth(token);
         }
 
-        return restTemplate.exchange(
-                url,
-                method,
-                new HttpEntity<>(body, headers),
-                String.class
-        );
+        return restTemplate.exchange(url, method, new HttpEntity<>(body, headers), String.class);
     }
 
     private String extractJsonValue(String json, String key) {
         try {
             com.fasterxml.jackson.databind.JsonNode node =
                     new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
-
             return node.get(key).asText();
-
         } catch (Exception e) {
             throw new RuntimeException("Could not extract " + key, e);
         }

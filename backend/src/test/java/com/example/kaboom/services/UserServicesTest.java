@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -72,13 +73,23 @@ class UserServicesTest {
         assertEquals(expected, ex.getStatusCode());
     }
 
-    // --------------------
+    // Registers a user with a valid name/email and the given password, expecting success.
+    private void assertRegisterAccepts(String password) {
+        RegisterDto dto = registerDto("john", "john@example.com", password);
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(password)).thenReturn("hashed");
+        when(userMapper.toDto(any(User.class))).thenReturn(mock(UserDto.class));
+
+        assertDoesNotThrow(() -> userServices.register(dto));
+    }
+
+    // ---------- register ----------
 
     @Test
     void register_validInput_savesUserWithNormalizedFieldsAndHashedPassword() {
-        RegisterDto dto = registerDto("  john  ", "  John_12@gmail.com ", "password123");
+        RegisterDto dto = registerDto("  john  ", "  John_12@gmail.com ", "Password123!");
         when(userRepository.findByEmail("john_12@gmail.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.encode("password123")).thenReturn("hashed");
+        when(passwordEncoder.encode("Password123!")).thenReturn("hashed");
         when(userMapper.toDto(any(User.class))).thenReturn(mock(UserDto.class));
 
         RegisterResponseDto result = userServices.register(dto);
@@ -94,9 +105,9 @@ class UserServicesTest {
 
     @ParameterizedTest
     @CsvSource({
-            "'',          a@b.com,  password123",   // blank name
-            "john,         not-email, password123",  // bad email
-            "john,         a@b.com,  short"          // password < 8 chars
+            "'',          a@b.com,   Password123!",   // blank name
+            "john,         not-email, Password123!",  // bad email
+            "john,         a@b.com,   short"          // password too short
     })
     void register_invalidInput_throwsBadRequest(String name, String email, String password) {
         RegisterDto dto = registerDto(name, email, password);
@@ -110,7 +121,7 @@ class UserServicesTest {
 
     @Test
     void register_nullName_throwsBadRequest() {
-        RegisterDto dto = registerDto(null, "a@b.com", "password123");
+        RegisterDto dto = registerDto(null, "a@b.com", "Password123!");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> userServices.register(dto));
@@ -120,7 +131,7 @@ class UserServicesTest {
 
     @Test
     void register_emailAlreadyExists_throwsConflict() {
-        RegisterDto dto = registerDto("john", "taken@example.com", "password123");
+        RegisterDto dto = registerDto("john", "taken@example.com", "Password123!");
         when(userRepository.findByEmail("taken@example.com"))
                 .thenReturn(Optional.of(mock(User.class)));
 
@@ -131,6 +142,55 @@ class UserServicesTest {
         verify(userRepository, never()).save(any());
     }
 
+    // ---------- register: password rules ----------
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Password12!",       // 11 chars, one under the minimum
+            "password123!abc",   // no capital letter
+            "PASSWORD123!ABC",   // no lowercase letter
+            "Password!!!!abc",   // no number
+            "Password123abc",    // no special symbol
+            "Password 123!abc",  // contains a space
+            "Password123'"       // ' is not an allowed symbol (old regex range bug)
+    })
+    void register_passwordBreaksRules_throwsBadRequest(String password) {
+        RegisterDto dto = registerDto("john", "john@example.com", password);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userServices.register(dto));
+
+        assertStatus(HttpStatus.BAD_REQUEST, ex);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_passwordLongerThan64_throwsBadRequest() {
+        RegisterDto dto = registerDto("john", "john@example.com", "Aa1!" + "a".repeat(61)); // 65 chars
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userServices.register(dto));
+
+        assertStatus(HttpStatus.BAD_REQUEST, ex);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_passwordExactly64_isAccepted() {
+        assertRegisterAccepts("Aa1!" + "a".repeat(60)); // 64 chars
+    }
+
+    @Test
+    void register_passwordExactly12_isAccepted() {
+        assertRegisterAccepts("Password123!"); // 12 chars
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"@", "#", "$", "%", "^", "&", "+", "=", "(", ")", "!", "*", "_", "-"})
+    void register_eachAllowedSpecialSymbol_isAccepted(String symbol) {
+        assertRegisterAccepts("Password123" + symbol); // exactly 12 chars
+    }
+
     // ---------- login ----------
 
     @Test
@@ -139,12 +199,12 @@ class UserServicesTest {
         when(user.getEmail()).thenReturn("john_12@gmail.com");
         when(user.getPasswordHash()).thenReturn("hashed");
         when(userRepository.findByEmail("john_12@gmail.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123", "hashed")).thenReturn(true);
+        when(passwordEncoder.matches("Password123!", "hashed")).thenReturn(true);
         when(jwtServices.generateToken(any(), any())).thenReturn("access-token");
         when(jwtServices.generateRefreshToken("john_12@gmail.com")).thenReturn("refresh-token");
         when(userMapper.toDto(user)).thenReturn(mock(UserDto.class));
 
-        LoginResponseDto result = userServices.login(loginDto("  john_12@gmail.com ", "password123"));
+        LoginResponseDto result = userServices.login(loginDto("  john_12@gmail.com ", "Password123!"));
 
         assertNotNull(result);
         verify(jwtServices).generateToken(any(), any());
@@ -170,7 +230,7 @@ class UserServicesTest {
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> userServices.login(loginDto("nobody@example.com", "password123")));
+                () -> userServices.login(loginDto("nobody@example.com", "Password123!")));
 
         assertStatus(HttpStatus.UNAUTHORIZED, ex);
     }
@@ -297,26 +357,35 @@ class UserServicesTest {
         UUID id = UUID.randomUUID();
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertFalse(userServices.update(id, "Name", "a@b.com", "password123"));
+        assertFalse(userServices.update(id, "Name", "a@b.com", "Password123!"));
         verify(userRepository, never()).save(any());
     }
 
     @Test
     void update_invalidEmail_returnsFalse() {
         UUID id = UUID.randomUUID();
-        User existing =  userWithId(id);
+        User existing = userWithId(id);
         when(userRepository.findById(id)).thenReturn(Optional.of(existing));
+
         assertFalse(userServices.update(id, null, "bad-email", null));
         verify(userRepository, never()).save(any());
     }
 
-    @Test
-    void update_shortPassword_returnsFalse() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "short",
+            "newpassword1!",    // no capital
+            "NEWPASSWORD1!",    // no lowercase
+            "NewPassword!!",    // no number
+            "NewPassword12",    // no special symbol
+            "New Password1!"    // contains a space
+    })
+    void update_invalidPassword_returnsFalse(String password) {
         UUID id = UUID.randomUUID();
-        User update =  userWithId(id);
-        when(userRepository.findById(id)).thenReturn(Optional.of(update));
+        User user = userWithId(id);
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
 
-        assertFalse(userServices.update(id, null, null, "short"));
+        assertFalse(userServices.update(id, null, null, password));
         verify(userRepository, never()).save(any());
     }
 
@@ -341,9 +410,9 @@ class UserServicesTest {
         User user = userWithId(id);
         when(userRepository.findById(id)).thenReturn(Optional.of(user));
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.encode("newPassword1")).thenReturn("newHash");
+        when(passwordEncoder.encode("NewPassword1!")).thenReturn("newHash");
 
-        boolean result = userServices.update(id, " New ", " NEW@example.com ", "newPassword1");
+        boolean result = userServices.update(id, " New ", " NEW@example.com ", "NewPassword1!");
 
         assertTrue(result);
         verify(user).setName("New");
@@ -364,6 +433,69 @@ class UserServicesTest {
         verify(user, never()).setEmail(any());
         verify(user, never()).setPasswordHash(any());
         verifyNoInteractions(passwordEncoder);
+    }
+
+    // ---------- changePassword ----------
+
+    @Test
+    void changePassword_valid_savesNewHash() {
+        User user = mock(User.class);
+        when(user.getPasswordHash()).thenReturn("oldHash");
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("OldPassword1!", "oldHash")).thenReturn(true);
+        when(passwordEncoder.encode("NewPassword1!")).thenReturn("newHash");
+
+        userServices.changePassword("me@example.com", "OldPassword1!", "NewPassword1!");
+
+        verify(user).setPasswordHash("newHash");
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void changePassword_wrongCurrentPassword_throwsBadRequest() {
+        User user = mock(User.class);
+        when(user.getPasswordHash()).thenReturn("oldHash");
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "oldHash")).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userServices.changePassword("me@example.com", "wrong", "NewPassword1!"));
+
+        assertStatus(HttpStatus.BAD_REQUEST, ex);
+        verify(userRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "short",
+            "newpassword1!",    // no capital
+            "NEWPASSWORD1!",    // no lowercase
+            "NewPassword!!",    // no number
+            "NewPassword12",    // no special symbol
+            "New Password1!"    // contains a space
+    })
+    void changePassword_newPasswordBreaksRules_throwsBadRequest(String newPassword) {
+        User user = mock(User.class);
+        when(user.getPasswordHash()).thenReturn("oldHash");
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("OldPassword1!", "oldHash")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userServices.changePassword("me@example.com", "OldPassword1!", newPassword));
+
+        assertStatus(HttpStatus.BAD_REQUEST, ex);
+        verify(passwordEncoder, never()).encode(any());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changePassword_userMissing_throwsNotFound() {
+        when(userRepository.findByEmail("gone@example.com")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userServices.changePassword("gone@example.com", "OldPassword1!", "NewPassword1!"));
+
+        assertStatus(HttpStatus.NOT_FOUND, ex);
     }
 
     // ---------- refresh ----------
@@ -413,7 +545,7 @@ class UserServicesTest {
         verify(jwtServices).generateToken(any(), any());
     }
 
-    // ---------- logout -----------
+    // ---------- logout ----------
 
     @Test
     void logout_returnsMessage() {
