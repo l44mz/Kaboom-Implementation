@@ -11,7 +11,3 @@ robot/*.token
 # python
 __pycache__/
 .venv/
-hs_err_pid*.log 
-replay_pid*.log 
-/Kaboom-Implementation/ 
-/backend/for
