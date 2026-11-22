@@ -27,4 +27,6 @@ public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
 
     // The user's items in one category, used so only one hat (or screen...) is equipped.
     List<Purchase> findAllByUser_IdAndProduct_Category(UUID userId, Product.Category category);
+
+    boolean existsByProduct_Id(UUID productId);
 }

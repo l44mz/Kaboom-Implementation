@@ -55,7 +55,7 @@ public class FocusSessionService {
     }
 
     /**
-     * Starts a new focus session for a user.
+     * Starts a new focus session for a user (called by the app).
      * If the app sends no robotId, the user's own robot (if they have one) is attached,
      * so the robot can find the session.
      */
@@ -64,16 +64,13 @@ public class FocusSessionService {
             UUID userId,
             CreateSessionRequest request) {
 
-        focusSessionRepository.findActiveOrPausedSessionByUserId(userId)
-                .ifPresent(session -> {
-                    throw new ResponseStatusException(
-                            HttpStatus.CONFLICT,
-                            "User already has an active or paused session");
-                });
-
-        User user = userRepository.findById(userId)
+        // Lock the user first to prevent concurrent session creation.
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
+
+        // Check for an existing open session while holding the lock.
+        ensureNoOpenSession(userId);
 
         Robot robot;
 
@@ -88,22 +85,39 @@ public class FocusSessionService {
                         HttpStatus.NOT_FOUND, "Robot not found");
             }
         } else {
-            // No robot chosen in the app: use the user's robot, or none.
             robot = robotRepository.findByUserId(userId)
                     .stream()
                     .findFirst()
                     .orElse(null);
         }
 
-        FocusSession session = new FocusSession(
-                user, robot, request.getPlannedDurationSeconds());
+        return toSessionResponse(createSession(user, robot, request));
+    }
 
-        session.setStartTime(LocalDateTime.now());
-        session.setStatus(FocusSession.SessionStatus.active);
+    /**
+     * Starts a new focus session from the robot's side (called by the robot).
+     * The session belongs to the user the robot is paired with.
+     */
+    @Transactional
+    public SessionResponse startSessionForRobot(
+            UUID robotId,
+            CreateSessionRequest request) {
 
-        FocusSession savedSession = focusSessionRepository.save(session);
+        Robot robot = robotRepository.findById(robotId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Robot not found"));
 
-        return toSessionResponse(savedSession);
+        User user = robot.getUser();
+
+        if (user == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Robot is not paired with a user");
+        }
+
+        ensureNoOpenSession(user.getId());
+
+        return toSessionResponse(createSession(user, robot, request));
     }
 
     /**
@@ -178,7 +192,16 @@ public class FocusSessionService {
      */
     @Transactional
     public EndSessionResponse endSession(UUID userId, UUID sessionId) {
-        FocusSession session = getOwnedSession(userId, sessionId);
+
+        FocusSession session = focusSessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Session not found"));
+
+        // Verify ownership
+        if (!session.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Session not found");
+        }
 
         if (session.getStatus() == FocusSession.SessionStatus.completed) {
             throw new ResponseStatusException(
@@ -189,11 +212,9 @@ public class FocusSessionService {
         LocalDateTime now = LocalDateTime.now();
 
         if (session.getStatus() == FocusSession.SessionStatus.active) {
-            // Credit the last few seconds since the robot's final report.
             accrueTime(session, now);
         }
 
-        // Include the current pause if the session is still paused.
         if (session.getStatus() == FocusSession.SessionStatus.paused
                 && session.getPauseStartedAt() != null) {
 
@@ -290,14 +311,17 @@ public class FocusSessionService {
                     HttpStatus.FORBIDDEN, "Robot does not own this session");
         }
 
+        // Paused or completed sessions ignore reports; the robot sees this on its next poll.
         if (session.getStatus() != FocusSession.SessionStatus.active) {
             return new FocusStateResponse(
                     "Session is not active; event ignored",
                     session.getCurrentState(),
                     session.getLastSequenceNumber(),
-                    session.isExplosionTriggered());
+                    session.isExplosionTriggered()
+            );
         }
 
+        // Duplicate or out-of-order report.
         if (request.sequenceNumber() <= session.getLastSequenceNumber()) {
             return new FocusStateResponse(
                     "Stale event ignored",
@@ -333,11 +357,7 @@ public class FocusSessionService {
         session.setLastSequenceNumber(request.sequenceNumber());
 
         // Save the matching face on the robot, so the app can read it later.
-        Robot.Expression expression = switch (request.state()) {
-            case FOCUSED -> Robot.Expression.smile;
-            case DISTRACTED -> Robot.Expression.distressed;
-            case AWAY -> Robot.Expression.eyes_closed;
-        };
+        Robot.Expression expression = expressionFor(request.state());
         session.getRobot().setCurrentExpression(expression);
         session.getRobot().setConnectionState(Robot.ConnectionState.connected);
         session.getRobot().setLastSeenAt(now);
@@ -347,6 +367,7 @@ public class FocusSessionService {
         return new FocusStateResponse(
                 "State recorded",
                 request.state(),
+
                 request.sequenceNumber(),
                 session.isExplosionTriggered());
     }
@@ -410,9 +431,9 @@ public class FocusSessionService {
         // 2. The finished sessions in the range, newest first.
         List<FocusSession> sessions = listFrom == null
                 ? focusSessionRepository.findByUser_IdAndStatusOrderByStartTimeDesc(
-                        userId, FocusSession.SessionStatus.completed)
+                userId, FocusSession.SessionStatus.completed)
                 : focusSessionRepository.findByUser_IdAndStatusAndStartTimeGreaterThanEqualOrderByStartTimeDesc(
-                        userId, FocusSession.SessionStatus.completed, listFrom);
+                userId, FocusSession.SessionStatus.completed, listFrom);
 
         // 3. Totals.
         int totalFocusSeconds = 0;
@@ -455,6 +476,39 @@ public class FocusSessionService {
 
     /** One part of the History chart, from start (inclusive) to end (exclusive). */
     private record Bucket(String label, LocalDateTime start, LocalDateTime end) {}
+
+    /** Throws 409 if the user already has an active or paused session. */
+    private void ensureNoOpenSession(UUID userId) {
+        focusSessionRepository.findActiveOrPausedSessionByUserId(userId)
+                .ifPresent(session -> {
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT,
+                            "User already has an active or paused session");
+                });
+    }
+
+    /** Creates and saves a new active session (robot may be null). */
+    private FocusSession createSession(User user, Robot robot, CreateSessionRequest request) {
+        FocusSession session = new FocusSession(
+                user, robot, request.getPlannedDurationSeconds());
+
+        session.setStartTime(LocalDateTime.now());
+        session.setStatus(FocusSession.SessionStatus.active);
+
+        return focusSessionRepository.save(session);
+    }
+
+    /** The face the robot shows for a state. Before any report, it smiles. */
+    private Robot.Expression expressionFor(FocusState state) {
+        if (state == null) {
+            return Robot.Expression.smile;   // no state reported yet
+        }
+        return switch (state) {
+            case FOCUSED -> Robot.Expression.smile;
+            case DISTRACTED -> Robot.Expression.distressed;
+            case AWAY -> Robot.Expression.eyes_closed;
+        };
+    }
 
     /**
      * Credits the time since the last report to the previous state.

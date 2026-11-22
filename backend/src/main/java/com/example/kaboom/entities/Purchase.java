@@ -10,7 +10,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "purchases")
+@Table(
+        name = "purchases",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_purchase_user_product",
+                columnNames = {"user_id", "product_id"}
+        )
+)
 @NoArgsConstructor
 @Getter
 @Setter
