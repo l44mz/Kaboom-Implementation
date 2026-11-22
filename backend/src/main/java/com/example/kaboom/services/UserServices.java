@@ -226,7 +226,7 @@ public class UserServices {
         if (!isValidPassword(newPassword)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "New password must be at least 8 characters"
+                    "Password must be 12-64 characters with uppercase, lowercase, a number and a special symbol, and no spaces"
             );
         }
 
@@ -339,6 +339,9 @@ public class UserServices {
     }
 
     private boolean isValidPassword(String password) {
-        return password != null && password.length() >= 8;
+        // not null, 12-64 characters, at least one lowercase letter, one capital letter,
+        // one number and one special symbol, no spaces
+        return password != null
+                && password.matches("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=()!*_\\-])(?=\\S+$).{12,64}$");
     }
 }

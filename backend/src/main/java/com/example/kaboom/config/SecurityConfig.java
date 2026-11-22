@@ -22,6 +22,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 import java.util.List;
 
@@ -48,6 +50,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
+                        .requestMatchers("/ws", "/ws/**").permitAll()
                         // Authentication endpoints are publicly accessible.
                         .requestMatchers("/api/v1/auth/**", "/error").permitAll()
 
@@ -56,10 +59,21 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
+
                         ).permitAll()
 
-                        // TEMPORARY: the robot has no login yet, so its two calls are open.
-                        // Replace with a device token before deploying.
+
+                        // Pairing: the robot has no token yet (the pairing secret is its credential).
+                        // POST /robots/pair is NOT here: the app calls it with the user's token.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/robots/pairing-codes",
+                                "/api/v1/robots/pairing-status",
+                                "/api/v1/robots/token/refresh"
+                        ).permitAll()
+
+                        // TEMPORARY: the robot's two session calls stay open until it sends its
+                        // device token (next step). Replace with a device-token check then.
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/robots/me/active-session"
@@ -82,9 +96,14 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
 
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+
                 .addFilterBefore(
                         jwtFilter,
                         UsernamePasswordAuthenticationFilter.class);
+
+
 
         return http.build();
     }

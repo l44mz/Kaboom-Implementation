@@ -66,8 +66,15 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable UUID id) {
-        return ResponseEntity.ok(userServices.getUserById(id));
+    public ResponseEntity<UserDto> getUserById(@PathVariable UUID id) {
+        User current = currentUser();
+
+        if (!current.getId().equals(id)) {
+            // 404 rather than 403, so the API doesn't confirm which ids exist
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
+        return ResponseEntity.ok(userMapper.toDto(current));
     }
 
     /**

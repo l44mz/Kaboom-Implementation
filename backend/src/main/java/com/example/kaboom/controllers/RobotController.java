@@ -2,10 +2,19 @@ package com.example.kaboom.controllers;
 
 import com.example.kaboom.dtos.FocusStateRequest;
 import com.example.kaboom.dtos.FocusStateResponse;
+import com.example.kaboom.dtos.PairRequest;
+import com.example.kaboom.dtos.PairingCodeRequest;
+import com.example.kaboom.dtos.PairingCodeResponse;
+import com.example.kaboom.dtos.PairingStatusRequest;
+import com.example.kaboom.dtos.PairingStatusResponse;
+import com.example.kaboom.dtos.RefreshDto;
+import com.example.kaboom.dtos.RefreshResponseDto;
 import com.example.kaboom.dtos.RobotDto;
 import com.example.kaboom.dtos.SessionResponse;
 import com.example.kaboom.entities.Robot;
 import com.example.kaboom.services.FocusSessionService;
+import com.example.kaboom.services.JwtServices;
+import com.example.kaboom.services.RobotPairingService;
 import com.example.kaboom.services.RobotService;
 import com.example.kaboom.services.UserServices;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,9 +24,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
@@ -39,13 +50,19 @@ public class RobotController {
     private final RobotService robotService;
     private final FocusSessionService focusSessionService;
     private final UserServices userServices;
+    private final RobotPairingService robotPairingService;
+    private final JwtServices jwtServices;
 
     public RobotController(RobotService robotService,
                            FocusSessionService focusSessionService,
-                           UserServices userServices) {
+                           UserServices userServices,
+                           RobotPairingService robotPairingService,
+                           JwtServices jwtServices) {
         this.robotService = robotService;
         this.focusSessionService = focusSessionService;
         this.userServices = userServices;
+        this.robotPairingService = robotPairingService;
+        this.jwtServices = jwtServices;
     }
 
     /**
@@ -120,5 +137,64 @@ public class RobotController {
 
         // TODO: when device tokens exist, return 403 unless the token's robot equals robotId.
         return ResponseEntity.ok(focusSessionService.recordState(robotId, request));
+    }
+
+    // ---------------------------------------------------------------------
+    // Pairing: the robot shows a 6-digit code on its screen, the user types it in the app.
+    //   1. Robot: POST /robots/pairing-codes   {serialNumber}  -> {code, pairingSecret, expiresAt}
+    //   2. App:   POST /robots/pair            {pairingCode}   (user token) -> the robot
+    //   3. Robot: POST /robots/pairing-status  {pairingSecret} -> "pending", then "paired" + device tokens
+    //   4. Robot: POST /robots/token/refresh   {refreshToken}  -> a new device access token
+    // ---------------------------------------------------------------------
+
+    @Operation(summary = "Request a pairing code",
+            description = "Robot only, no token. The robot shows the code on its screen.")
+    @PostMapping("/pairing-codes")
+    public ResponseEntity<PairingCodeResponse> requestPairingCode(
+            @Valid @RequestBody PairingCodeRequest request) {
+        return ResponseEntity.ok(robotPairingService.requestCode(request.serialNumber()));
+    }
+
+    @Operation(summary = "Claim a pairing code",
+            description = "App only. Links the robot that shows this code to the logged-in user.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Robot linked to the user"),
+            @ApiResponse(responseCode = "404", description = "Pairing code not found or expired"),
+            @ApiResponse(responseCode = "409", description = "The user already has a different robot")
+    })
+    @PostMapping("/pair")
+    public ResponseEntity<RobotDto> pair(
+            Authentication authentication,
+            @Valid @RequestBody PairRequest request) {
+        // Answer with the DTO, never the Robot entity (it holds the User with its password hash).
+        Robot robot = robotPairingService.claim(authentication.getName(), request.pairingCode());
+        return ResponseEntity.ok(RobotService.toDto(robot));
+    }
+
+    @Operation(summary = "Collect the device tokens",
+            description = "Robot only, no token: the pairing secret is the credential. "
+                    + "Returns \"pending\" until the user enters the code in the app.")
+    @PostMapping("/pairing-status")
+    public ResponseEntity<PairingStatusResponse> pairingStatus(
+            @Valid @RequestBody PairingStatusRequest request) {
+        return ResponseEntity.ok(robotPairingService.collect(request.pairingSecret()));
+    }
+
+    @Operation(summary = "Refresh the robot's access token",
+            description = "Robot only. Takes the device refresh token from pairing-status.")
+    @PostMapping("/token/refresh")
+    public ResponseEntity<RefreshResponseDto> refreshDeviceToken(
+            @Valid @RequestBody RefreshDto request) {
+        String token = request.getRefreshToken();
+        boolean valid;
+        try {
+            valid = jwtServices.isValidDeviceRefreshToken(token);
+        } catch (RuntimeException e) {
+            valid = false;
+        }
+        if (!valid) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid device refresh token");
+        }
+        return ResponseEntity.ok(robotPairingService.refreshDevice(token));
     }
 }
