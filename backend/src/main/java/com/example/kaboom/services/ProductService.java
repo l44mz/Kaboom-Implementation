@@ -4,6 +4,7 @@ import com.example.kaboom.dtos.ProductDto;
 import com.example.kaboom.entities.Product;
 import com.example.kaboom.repositories.ProductImageRepository;
 import com.example.kaboom.repositories.ProductRepository;
+import com.example.kaboom.repositories.PurchaseRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,13 +18,16 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
+    private final PurchaseRepository purchaseRepository;
 
     public ProductService(
             ProductRepository productRepository,
-            ProductImageRepository productImageRepository
+            ProductImageRepository productImageRepository,
+            PurchaseRepository purchaseRepository
     ) {
         this.productRepository = productRepository;
         this.productImageRepository = productImageRepository;
+        this.purchaseRepository = purchaseRepository;
     }
 
     // Returns only available products for regular shop users.
@@ -87,10 +91,24 @@ public class ProductService {
     public void deleteProduct(UUID id) {
         Product product = getProductById(id);
 
-        // Delete the associated image before deleting the product.
-        productImageRepository.deleteByProductId(id);
+        if (purchaseRepository.existsByProduct_Id(id)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Product has been purchased; hide it instead of deleting it"
+            );
+        }
 
-        // Delete the product after its image has been removed.
+        productImageRepository.deleteByProductId(id);
         productRepository.delete(product);
+    }
+
+    public Product getAvailableProductById(UUID id) {
+        Product product = getProductById(id);
+
+        if (!product.isAvailable()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+        }
+
+        return product;
     }
 }
