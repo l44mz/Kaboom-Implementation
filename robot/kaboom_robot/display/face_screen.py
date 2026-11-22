@@ -3,12 +3,16 @@
 Other code sets `face.expression` ("focused", "distracted", "away", "happy" or "exploded");
 the thread keeps drawing and sending frames, so the face stays alive (blinking,
 looking around) even while the camera or the network is busy.
+
+While the robot is not paired, show_code("482913") shows the pairing code instead of the
+face; clear_code() goes back to the face.
 """
 
 import threading
 import time
 
 from kaboom_robot.display.face import EXPRESSIONS, FaceAnimator
+from kaboom_robot.display.pairing_screen import render_pairing
 
 
 class FaceScreen(threading.Thread):
@@ -37,17 +41,29 @@ class FaceScreen(threading.Thread):
         self._fps = fps
         self._stop_event = threading.Event()
         self.expression = "happy"
+        self.code = None  # the pairing code to show, or None to show the face
 
     def set(self, expression: str) -> None:
         if expression in EXPRESSIONS:
             self.expression = expression
 
+    def show_code(self, code: str) -> None:
+        """Show the pairing code instead of the face."""
+        self.code = code
+
+    def clear_code(self) -> None:
+        """Back to the face (after pairing)."""
+        self.code = None
+
     def run(self) -> None:
         try:
             while not self._stop_event.is_set():
                 now = time.monotonic()
-                self._animator.set_expression(self.expression)
-                self._screen.show(self._animator.frame(now))
+                if self.code:
+                    self._screen.show(render_pairing(self.code, now))
+                else:
+                    self._animator.set_expression(self.expression)
+                    self._screen.show(self._animator.frame(now))
                 time.sleep(max(0.0, 1 / self._fps - (time.monotonic() - now)))
         except Exception as e:
             print(f"Face screen stopped: {e}")
