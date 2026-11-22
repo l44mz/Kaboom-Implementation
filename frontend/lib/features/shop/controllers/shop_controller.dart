@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../../shared/controllers/outfit_controller.dart';
 import '../../../shared/controllers/user_controller.dart';
 import '../models/shop_item.dart';
 import '../services/shop_service.dart';
@@ -115,6 +116,7 @@ class ShopController extends GetxController {
       try {
         await _shop.setEquipped(item.id, true);
         _markEquipped(item, true);
+        _refreshOutfit();
       } on DioException catch (_) {
         // Bought anyway; the card shows "Owned" instead of "Equipped".
       }
@@ -135,6 +137,7 @@ class ShopController extends GetxController {
     try {
       await _shop.setEquipped(item.id, !item.equipped);
       _markEquipped(item, !item.equipped);
+      _refreshOutfit();
       return null;
     } on DioException catch (e) {
       return apiErrorMessage(e);
@@ -154,6 +157,12 @@ class ShopController extends GetxController {
         else
           other,
     ]);
+  }
+
+  /// Tells the shared outfit that something was put on or taken off,
+  /// so Sparky on Home is already dressed when you go back.
+  void _refreshOutfit() {
+    if (Get.isRegistered<OutfitController>()) Get.find<OutfitController>().load();
   }
 
   void _replace(ShopItem updated) {

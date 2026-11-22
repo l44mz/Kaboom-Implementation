@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import 'app.dart';
 import 'core/notifications/session_notifications.dart';
+import 'shared/controllers/outfit_controller.dart';
 import 'shared/controllers/user_controller.dart';
 
 Future<void> main() async {
@@ -10,7 +11,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SessionNotifications.instance.init();
 
-  Get.put(UserController(), permanent: true);// Make the user controller available to the app.
-  
+  // Shared by every screen, so registered once and never deleted (permanent).
+  Get.put(UserController(), permanent: true); // the user and the coins
+  Get.put(OutfitController(), permanent: true); // what Sparky wears (Home + Store)
+
   runApp(const KaboomApp());
 }

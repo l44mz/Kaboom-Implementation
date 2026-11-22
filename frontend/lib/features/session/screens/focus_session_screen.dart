@@ -221,28 +221,40 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     final now = DateTime.now();
     final clock = _clock!;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(32, 16, 32, 40),
+    // Everything fits on one screen, with no scrolling (same idea as Home):
+    // the face and the ring are Flexible + FittedBox, so on a short phone they
+    // shrink to leave room for the buttons. On a tall phone they keep their size.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 24),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          RobotFace(expression: _expressionFor(_state)),
-          const SizedBox(height: 27),
-          _StatusChip(state: _state),
-          const SizedBox(height: 39),
-          // Shrinks the 317 px ring on phones narrower than the Figma frame.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: _TimerRing(
-              fraction: clock.remainingFraction(now),
-              time: SessionClock.format(clock.remainingSeconds(now)),
-              message: clock.isPaused
-                  ? 'Session paused'
-                  : _hasRobotState
-                      ? _state.message
-                      : 'Waiting for Sparky...',
+          Flexible(
+            flex: 3,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: RobotFace(expression: _expressionFor(_state)),
             ),
           ),
-          const SizedBox(height: 23),
+          const SizedBox(height: 16),
+          _StatusChip(state: _state),
+          const SizedBox(height: 20),
+          Flexible(
+            flex: 5,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: _TimerRing(
+                fraction: clock.remainingFraction(now),
+                time: SessionClock.format(clock.remainingSeconds(now)),
+                message: clock.isPaused
+                    ? 'Session paused'
+                    : _hasRobotState
+                        ? _state.message
+                        : 'Waiting for Sparky...',
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -259,7 +271,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 23),
+          const SizedBox(height: 20),
           SizedBox(
             width: 256,
             height: 52,

@@ -8,9 +8,12 @@ import '../../../core/router/app_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/controllers/outfit_controller.dart';
 import '../../../shared/controllers/user_controller.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/app_snackbar.dart';
+import '../../../shared/widgets/dressed_robot.dart';
+import '../../../shared/widgets/coin_chip.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -49,6 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // Shared with the side menu on every screen, so the coins match everywhere.
       await Get.find<UserController>().load();
+      // What Sparky wears. Not awaited: the robot shows right away and gets dressed
+      // when the pictures arrive.
+      if (Get.isRegistered<OutfitController>()) Get.find<OutfitController>().load();
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = apiErrorMessage(e));
@@ -80,6 +86,16 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.textPrimary,
+        // The coins at the top right, like the Store. Obx redraws the chip by itself
+        // when the shared balance changes (after a session or a purchase).
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Obx(
+              () => CoinChip(coins: Get.find<UserController>().user.value?.coins),
+            ),
+          ),
+        ],
       ),
       drawer: const AppDrawer(),
       body: SafeArea(child: _buildBody()),
@@ -100,11 +116,21 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Flexible(
+          Flexible(
             flex: 3,
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: RobotFace(expression: RobotExpression.ready, glow: true),
+              // Obx: Sparky changes outfit by himself when the Store equips something.
+              child: Obx(() {
+                final outfit = Get.find<OutfitController>();
+                return DressedRobot(
+                  expression: RobotExpression.ready,
+                  glow: true,
+                  hat: outfit.hat,
+                  screen: outfit.screen,
+                  effect: outfit.effect,
+                );
+              }),
             ),
           ),
           const SizedBox(height: 20),

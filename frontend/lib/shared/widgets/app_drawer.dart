@@ -39,7 +39,13 @@ class AppDrawer extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: FilledButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
+                      // Before: only closed the menu, so on any other page nothing happened.
+                      // Now: close the menu and go Home, where you pick the time and start.
+                      onPressed: () {
+                        final router = GoRouter.of(context); // read it before the menu closes
+                        Navigator.of(context).pop();
+                        router.go(AppRoutes.home);
+                      },
                       icon: const Icon(Icons.play_arrow_outlined),
                       label: const Text('Start Session'),
                       style: FilledButton.styleFrom(
