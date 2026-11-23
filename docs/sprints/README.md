@@ -30,13 +30,13 @@ Commits are counted on all GitHub branches (merge commits excluded), by commit d
 |---|---|---|---|---|---|---|---|
 | 1 | 16 | 16 | 34 | 34 | 100% | 15 | 1 (#1) |
 | 2 | 9 | 9 | 25 | 25 | 100% | 19 | 6 (#6 to #11) |
-| 3 | 5 | 4 | 14 | 11 | 79% | 14 | 3 (#12 to #14) |
-| 4 | 23 | 13 | 66 | 45 | 68% (goal met) | 11 | 2 (#15, #16) |
+| 3 | 5 | 5 | 14 | 14 | 100% | 14 | 3 (#12 to #14) |
+| 4 | 12 | 12 | 40 | 40 | 100% | 11 | 2 (#15, #16) |
 | 5 | 18 | 18 | 42 | 42 | 100% | 9 | 0 |
-| 6 | 20 | 8 | 51 | 21 | 41% | 16 | 3 (#17 to #19) |
-| **Total** | **91** | **68** | **232** | **178** | **77%** | **84** | **15** |
+| 6 | 21 | 9 | 56 | 26 | 46% | 16 | 3 (#17 to #19) |
+| **Total** | **81** | **69** | **211** | **181** | **86%** | **84** | **15** |
 
-Velocity (points done per sprint): 34, 25, 11, 45, 42, 21. Sprint 4 had the largest board of the stage, and its goal (the full focus loop) was met. Sprint 5 delivered everything it planned. Sprint 6 was the QA and release sprint; its open cards are user testing, the detection accuracy evaluation, the production deploy, the release to `master`, Flutter tests, and the optional expression themes.
+Velocity (points done per sprint): 34, 25, 14, 40, 42, 26. Sprints 1 to 5 delivered everything they planned; Sprint 4 reached its goal, the full focus loop. Sprint 6 was the QA and release sprint; its open cards are user testing, the detection accuracy evaluation, the production deploy, the release to `master`, Flutter tests, and the optional expression themes.
 
 After Sprint 6 (Nov 22 and 23), PRs #21 to #24 added Sparky's outfit on Home, robot pairing with a code, device tokens, STOMP for the robot, the backend test suite, and CI that runs the backend and app tests on every push and pull request.
 
