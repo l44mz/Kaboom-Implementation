@@ -79,3 +79,24 @@ jobs:
 
       - name: Run the app tests
         run: flutter test
+
+  robot:
+    name: Robot (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: robot
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The tests only check the vision logic (state machine, scoring, metrics, config),
+      # so they need no camera, screen or MediaPipe.
+      - name: Install test packages
+        run: pip install numpy pyyaml pytest
+
+      - name: Run the robot tests
+        run: python -m pytest -v
