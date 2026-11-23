@@ -14,7 +14,7 @@ from kaboom_robot.config import load_config
 from kaboom_robot.vision.calibration import Baseline
 from kaboom_robot.vision.camera import Camera
 from kaboom_robot.vision.face_tracker import FaceTracker
-from kaboom_robot.vision.state_machine import FocusStateMachine
+from kaboom_robot.vision.state_machine import FocusState, FocusStateMachine
 
 
 HEARTBEAT_INTERVAL = 10
@@ -157,6 +157,8 @@ def main():
                         now,
                         adjusted_observation,
                     )
+                    # Follow slow posture changes (leaning back, moving the chair).
+                    baseline.adapt(now, observation, focused=state == FocusState.FOCUSED)
 
                     status = state.value
                     color = COLORS[status]

@@ -74,6 +74,49 @@ def mean_gaze(pixels: np.ndarray) -> float | None:
     return float(np.mean(scores)) if scores else None
 
 
+def gaze_vector(pixels: np.ndarray, eye: tuple, iris: int) -> tuple[float, float] | None:
+    """Where the iris sits from the eye's center, as (left/right, up/down) in eye widths.
+
+    Unlike gaze_score, this keeps the direction, so the Baseline can subtract the
+    user's normal gaze (for example, eyes always a bit to the left toward the laptop).
+    """
+    points = pixels[list(eye)]
+    x_min, y_min = points.min(axis=0)
+    x_max, y_max = points.max(axis=0)
+    width = x_max - x_min
+    if width <= 1e-6:
+        return None
+    center = np.array([(x_min + x_max) / 2, (y_min + y_max) / 2])
+    dx, dy = (pixels[iris] - center) / width
+    return float(dx), float(dy)
+
+
+def mean_gaze_vector(pixels: np.ndarray) -> tuple[float, float] | None:
+    """Average gaze vector of both eyes."""
+    vectors = [
+        gaze_vector(pixels, LEFT_EYE, LEFT_IRIS),
+        gaze_vector(pixels, RIGHT_EYE, RIGHT_IRIS),
+    ]
+    vectors = [v for v in vectors if v is not None]
+    if not vectors:
+        return None
+    return float(np.mean([v[0] for v in vectors])), float(np.mean([v[1] for v in vectors]))
+
+
+def face_area(pixels: np.ndarray) -> float:
+    """Area of the box around all face points, in pixels. Bigger = closer to the camera."""
+    x_min, y_min = pixels.min(axis=0)
+    x_max, y_max = pixels.max(axis=0)
+    return float((x_max - x_min) * (y_max - y_min))
+
+
+def largest_face(faces: list[np.ndarray]) -> int | None:
+    """Index of the biggest face, so a person walking behind the user is ignored."""
+    if not faces:
+        return None
+    return max(range(len(faces)), key=lambda i: face_area(faces[i]))
+
+
 def head_angles(matrix) -> tuple[float, float, float]:
     """Read (yaw, pitch, roll) in degrees from MediaPipe's 4x4 face transformation matrix.
 
