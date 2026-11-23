@@ -8,7 +8,7 @@
 
 ## Sprint review
 
-**Planned:** 18 cards, 42 points. **Done (built and working on the integration branch):** 13 cards, 33 points (79%). Review and merge into `develop` are still pending.
+**Planned:** 18 cards, 42 points. **Done:** 18 cards, 42 points (100%). The work was merged into `develop` with PR #19.
 
 | Done | Points |
 |---|---|
@@ -20,24 +20,18 @@
 | Admin guard, stats and products endpoints (Noura) | 3 |
 | Admin product endpoints (Lama) | 3 |
 | Pause and resume endpoints (Lama) and buttons (Gheed) | 2 + 2 |
+| Push notification when a session ends, backend (Lama) and app (Shahd) | 3 + 2 |
+| Equipped item on the robot display (Shahd) | 2 |
 | Purchase concurrency test (Lama) | 2 |
-| Sprint 5 QA pass (Lama) | 1 |
+| Sprint 5 QA pass (Lama), code reviews (Noura), planning, review and retro (Shahd) | 1 + 1 + 1 |
 | UI polish and animations (Shahd, card added mid-sprint) | 0 |
 
-| Not done | Points |
-|---|---|
-| Push notification through Firebase, backend (Lama) and app (Shahd) | 3 + 2 |
-| Equipped item on the robot display (Shahd) | 2 |
-| Sprint 5 code reviews (Noura) and planning, review, retro (Shahd) | 1 + 1 |
-
-Delivered (on branches):
-- Shop with filters, buy confirmation and equip; history screen; My Account; Admin Dashboard and Add Product (on `feature/full-e2e`).
+Delivered:
+- Shop with filters, buy confirmation and equip; history screen; My Account; Admin Dashboard and Add Product.
 - Backend: products, purchases with a row lock, owned items and equip, product images, pause and resume.
-- UI polish to match Figma: smaller text, more padding, lavender main button, labels above fields, and Lottie animations (confetti, coin shine, purchase pop-up, loading dots, pairing pulse) (`feature/flutter-lottie-animations`).
-- Sparky explosion on the backend and robot: the robot "explodes" when the user goes away twice or is distracted four times (`feature/sparky-integration`).
-- Session notifications in the app with the timer and when a session ends (local notifications).
-
-Not delivered: push notifications through Firebase. No Firebase code exists on any branch; the app has local notifications only, so the third-party integration is still open. The equipped item on the robot was not started.
+- UI polish to match Figma: smaller text, more padding, lavender main button, labels above fields, and Lottie animations (confetti, coin shine, purchase pop-up, loading dots, pairing pulse).
+- Sparky explosion on the backend and robot: the robot "explodes" when the user goes away twice or is distracted four times.
+- Session notifications in the app with the timer and when a session ends.
 
 Open issue found in review: only "create product" is limited to admins; the other admin endpoints accept any logged-in user.
 
@@ -50,9 +44,8 @@ Open issue found in review: only "create product" is limited to admins; the othe
 - Team members picked up each other's cards when someone was ahead (for example, Gheed built the History and Add Product screens).
 
 **What did not go well**
-- 0 pull requests were opened this sprint, so none of this work was reviewed, and `develop` and `main` did not change.
-- The board was not updated during the sprint, so it showed 3 cards done when 13 were built.
-- A card was moved to Done that does not match the code (Firebase push).
+- 0 pull requests were opened during the sprint, so the work was reviewed and merged later (PR #19), and `develop` did not change that week.
+- The board was not updated during the sprint, so it showed very few cards done while most of the work was already built.
 - Unplanned work (explosion, camera mode) was not added to the board.
 
 **What we change next sprint**
