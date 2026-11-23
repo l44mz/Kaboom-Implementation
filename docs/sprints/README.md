@@ -43,6 +43,6 @@ After Sprint 6 (Nov 22 and 23), more PRs were merged into `develop`:
 - #23 and #24: robot pairing with the code on Sparky's screen, device tokens, STOMP for the robot, the backend test suite, and CI that runs the backend and app tests on every push and pull request.
 - #25: these sprint documents updated from Trello.
 - #26: smarter focus detection on the robot and an accuracy test tool.
+- #29: final QA report and the robot tests in CI. All three test suites now run on every push and pull request: backend 397, app 39 (the Flutter widget and logic tests), robot 46. See [the final QA report](../qa/reports/sprint-6.md).
 
-Bugs: 0 bug cards were logged on any board. Every board has a Bugs list with a template, but it was never used.
-
+Bugs: the Trello Bugs lists were not used during the sprints. The bugs found are logged in [docs/qa/bugs.md](../qa/bugs.md): 6 bugs, 5 fixed, 1 open, and no open Critical or High bugs.
