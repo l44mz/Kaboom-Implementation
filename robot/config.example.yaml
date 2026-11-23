@@ -10,8 +10,10 @@ vision:
   model_path: models/face_landmarker.task
   calibration_s: 3    # seconds to learn the user's normal working pose
   thresholds:
-    ear_closed: 0.15
+    ear_closed: 0.15        # eyes closed below this EAR (only before calibration)
+    ear_closed_ratio: 0.6   # after calibration: closed under 60% of the user's own open eyes
     gaze_off: 0.20
+    smoothing_s: 0.15       # averages the numbers over this long so they don't flicker (0 = off)
     yaw_deg: 30
     pitch_deg: 20
     roll_deg: 30
