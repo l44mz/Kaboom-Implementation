@@ -27,7 +27,8 @@ class VisionConfig:
 @dataclass(frozen=True)
 class ApiConfig:
     base_url: str = "http://localhost:8080/api/v1"  # the backend, as the robot sees it
-    robot_id: str = ""  # this robot's id in the backend's robots table
+    robot_id: str = ""  # optional: filled in by pairing (saved in ~/.kaboom_robot/)
+    serial_number: str = ""  # optional: default is the Pi's own serial (see device_id.py)
     poll_s: float = 3.0  # how often to ask the backend for a session
 
 
@@ -59,6 +60,8 @@ def load_config(path: Path | None = None) -> RobotConfig:
     api_args = _pick(ApiConfig, data.get("api"))
     if "robot_id" in api_args:
         api_args["robot_id"] = str(api_args["robot_id"] or "").strip()
+    if "serial_number" in api_args:
+        api_args["serial_number"] = str(api_args["serial_number"] or "").strip()
 
     return RobotConfig(
         camera=CameraConfig(**_pick(CameraConfig, data.get("camera"))),
