@@ -3,3 +3,6 @@ models/
 
 # Built on each Pi from kaboom_robot/display/ili9486_par.c
 kaboom_robot/display/libili9486.so
+
+# Accuracy test recordings (CSV and reports); copy the reports you keep into docs/qa
+recordings/
