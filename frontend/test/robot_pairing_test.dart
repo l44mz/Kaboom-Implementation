@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide Response;
 import 'package:kaboom_app/core/network/api_client.dart';
 import 'package:kaboom_app/core/storage/token_storage.dart';
 import 'package:kaboom_app/features/account/models/robot_info.dart';
