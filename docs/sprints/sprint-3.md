@@ -18,7 +18,7 @@ The rest of the Sprint 3 scope (pairing endpoints and screen, session endpoints,
 
 ## Sprint review
 
-**On the board:** 5 cards, 14 points. **Done in time:** 4 cards, 11 points (79%). The robot pairing card was moved to Done later, on Nov 4.
+**Planned:** 5 cards, 14 points. **Done:** 5 cards, 14 points (100%). Four were done within the sprint, and the robot pairing card was finished on Nov 4.
 
 Delivered:
 - Robot focus detection: face, eyes, head pose and a time based state machine (Focused, Distracted, Away) with tests (PR #12).
