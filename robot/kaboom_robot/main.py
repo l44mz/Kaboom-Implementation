@@ -189,6 +189,8 @@ def watch_session(
                         print("Calibrated. Watching...")
                 else:
                     state = machine.update(now, baseline.apply(obs))
+                    # Follow slow posture changes (leaning back, moving the chair).
+                    baseline.adapt(now, obs, focused=state == FocusState.FOCUSED)
                     status = "EXPLODED" if explosion_triggered else state.value
                     color = COLORS[state]
 

@@ -60,6 +60,8 @@ def main() -> None:
                     color = (200, 200, 200)
                 else:
                     state = machine.update(now, baseline.apply(obs))
+                    # Follow slow posture changes (leaning back, moving the chair).
+                    baseline.adapt(now, obs, focused=state == FocusState.FOCUSED)
                     if state != last_state:
                         reason = ", ".join(machine.reasons) or "all good"
                         print(f"{now - start:7.1f}s  {state.value:<10}  ({reason})")
