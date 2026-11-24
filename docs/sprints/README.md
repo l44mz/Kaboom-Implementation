@@ -33,8 +33,8 @@ Commits are counted on all GitHub branches (merge commits excluded), by commit d
 | 3 | 5 | 5 | 14 | 14 | 100% | 14 | 3 (#12 to #14) |
 | 4 | 12 | 12 | 40 | 40 | 100% | 11 | 2 (#15, #16) |
 | 5 | 18 | 18 | 42 | 42 | 100% | 9 | 0 |
-| 6 | 19 | 16 | 49 | 36 | 73% | 18 | 3 (#17 to #19) |
-| **Total** | **79** | **76** | **204** | **191** | **94%** | **86** | **18** |
+| 6 | 19 | 17 | 49 | 36 | 90% | 18 | 3 (#17 to #19) |
+| **Total** | **79** | **76** | **204** | **191** | **98%** | **86** | **18** |
 
 Velocity (points done per sprint): 34, 25, 14, 40, 42, 36. Sprints 1 to 5 delivered everything they planned; Sprint 4 reached its goal, the full focus loop. Sprint 6 was the QA and release sprint: 16 cards are done and 3 are in progress (the detection accuracy evaluation with 5 users, bug fixing and the production deploy, and the Flutter widget and logic tests).
 
@@ -45,4 +45,4 @@ After Sprint 6 (Nov 22 and 23), more PRs were merged into `develop`:
 - #26: smarter focus detection on the robot and an accuracy test tool.
 - #29: final QA report and the robot tests in CI. All three test suites now run on every push and pull request: backend 397, app 39 (the Flutter widget and logic tests), robot 46. See [the final QA report](../qa/reports/sprint-6.md).
 
-Bugs: the Trello Bugs lists were not used during the sprints. The bugs found are logged in [docs/qa/bugs.md](../qa/bugs.md): 6 bugs, 5 fixed, 1 open, and no open Critical or High bugs.
+Bugs: the Trello Bugs lists were not used during the sprints. The bugs found are logged in [docs/qa/bugs.md](../qa/bugs.md): 6 bugs, 5 fixed.
