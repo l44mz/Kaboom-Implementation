@@ -6,6 +6,7 @@ import '../../features/admin/screens/add_product_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
+import '../../features/focus_mode/screens/focus_mode_screen.dart';
 import '../../features/history/screens/history_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/robot/screens/robot_pairing_screen.dart';
@@ -23,6 +24,7 @@ class AppRoutes {
   static const sessionComplete = '/session/complete';
   static const shop = '/shop';
   static const robotPair = '/robot/pair';
+  static const focusMode = '/focus-mode';
   static const history = '/history';
   static const admin = '/admin';
   static const addProduct = '/admin/products/new';
@@ -47,6 +49,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(path: AppRoutes.shop, builder: (context, state) => const ShopScreen()),
     GoRoute(path: AppRoutes.robotPair, builder: (context, state) => const RobotPairingScreen()),
+    GoRoute(path: AppRoutes.focusMode, builder: (context, state) => const FocusModeScreen()),
     GoRoute(path: AppRoutes.history, builder: (context, state) => const HistoryScreen()),
     GoRoute(path: AppRoutes.account, builder: (context, state) => const AccountScreen()),
     GoRoute(path: AppRoutes.admin, builder: (context, state) => const AdminDashboardScreen()),

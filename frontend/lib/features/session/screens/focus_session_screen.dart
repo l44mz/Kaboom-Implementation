@@ -18,6 +18,7 @@ import '../models/focus_session.dart';
 import '../models/focus_state.dart';
 import '../models/session_clock.dart';
 import '../models/session_result.dart';
+import '../services/camera_session_service.dart';
 import '../services/session_service.dart';
 
 /// The running session (Figma "Focused / Distracted / Away Status In Session").
@@ -39,8 +40,11 @@ class FocusSessionScreen extends StatefulWidget {
 }
 
 class _FocusSessionScreenState extends State<FocusSessionScreen> {
-  late final SessionService _service =
-      widget.service ?? SessionService(ApiClient(TokenStorage()));
+  // Camera sessions pause, resume and end through /camera-sessions.
+  late final SessionService _service = widget.service ??
+      (widget.session?.isCamera ?? false
+          ? CameraSessionService(ApiClient(TokenStorage()))
+          : SessionService(ApiClient(TokenStorage())));
 
   SessionClock? _clock;
   Timer? _ticker;
@@ -65,8 +69,13 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     final session = widget.session;
     if (session == null) return;
 
+    // The clock starts now, on the phone, not at the server's startTime.
+    // The server sends its own local time with no time zone (for example
+    // "2026-11-24T17:00:00" from Render, which runs in UTC). On a phone in
+    // Riyadh (UTC+3) that looked 3 hours old, so the session ended at once.
+    // The screen opens right after the session starts, so now is the real start.
     _clock = SessionClock(
-      startTime: session.startTime,
+      startTime: DateTime.now(),
       plannedSeconds: session.plannedDurationSeconds,
     );
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
