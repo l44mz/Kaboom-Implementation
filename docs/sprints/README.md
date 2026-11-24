@@ -36,7 +36,7 @@ Commits are counted on all GitHub branches (merge commits excluded), by commit d
 | 6 | 19 | 17 | 49 | 44 | 90% | 18 | 3 (#17 to #19) |
 | **Total** | **79** | **77** | **204** | **199** | **98%** | **86** | **18** |
 
-Velocity (points done per sprint): 34, 25, 14, 40, 42, 36. Sprints 1 to 5 delivered everything they planned; Sprint 4 reached its goal, the full focus loop. Sprint 6 was the QA and release sprint: 17 cards are done and 2 are in progress (the detection accuracy evaluation with 5 users, bug fixing and the production deploy).
+Velocity (points done per sprint): 34, 25, 14, 40, 42, 44. Sprints 1 to 5 delivered everything they planned; Sprint 4 reached its goal, the full focus loop. Sprint 6 was the QA and release sprint: 17 cards are done and 2 are in progress (the detection accuracy evaluation with 5 users, bug fixing and the production deploy).
 
 After Sprint 6 (Nov 22 and 23), more PRs were merged into `develop`:
 - #21: Sparky's outfit on Home.
