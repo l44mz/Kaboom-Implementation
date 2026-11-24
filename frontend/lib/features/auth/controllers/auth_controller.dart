@@ -9,9 +9,10 @@ import '../services/auth_service.dart';
 
 /// Logic and state for the Sign Up and Login screens.
 class AuthController extends GetxController {
-  AuthController({TokenStorage? tokens})
+  /// [api] is for tests (a fake backend); the app leaves it empty.
+  AuthController({TokenStorage? tokens, ApiClient? api})
       : _tokens = tokens ?? TokenStorage() {
-    _authService = AuthService(ApiClient(_tokens));
+    _authService = AuthService(api ?? ApiClient(_tokens));
   }
 
   final TokenStorage _tokens;
