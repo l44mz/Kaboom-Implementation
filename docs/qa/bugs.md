@@ -9,9 +9,9 @@ Bugs found during Stage 4, with how they were fixed. Severity follows the QA tes
 | 3 | Android build fails with `flutter_local_notifications` 23 | High | Nov 2026 | Fixed | Package pinned to 22.3.3 |
 | 4 | JUnit branch had a hard-coded database password and crash logs | High | Nov 22 | Fixed | PR #23 |
 | 5 | `robot_pairing_test.dart` does not compile (`Response` in Dio and GetX) | Low | Nov 22 | Fixed | Commit `5bffab6` (PR #24) |
-| 6 | Phone app cannot reach the backend on the current Wi-Fi | Medium | Nov 23 | Open | Workaround: the app in Chrome |
 
-**Total:** 6 bugs, 5 fixed, 1 open. No open Critical or High bugs.
+
+**Total:** 5 bugs, 5 fixed.
 
 ## Details
 
@@ -44,8 +44,3 @@ Bugs found during Stage 4, with how they were fixed. Severity follows the QA tes
 - **What happened:** the test imports both Dio and GetX, and both define `Response`, which gave the errors `'Response' isn't a function` and "defined in both libraries".
 - **Fix:** `import 'package:get/get.dart' hide Response;`. All 3 tests pass in CI.
 
-### 6. Phone app cannot reach the backend on the current Wi-Fi (Medium, open)
-
-- **What happened:** the release APK shows "Cannot reach the server" at login. The same backend works from the Raspberry Pi (pairing works) and from the app in Chrome on the PC, so the app code is fine. The problem is the network between the phone and the PC.
-- **Workaround:** use the Flutter web build in Chrome.
-- **Next:** check the phone's IP and whether the Wi-Fi isolates devices, or use a hotspot. The long-term fix is the production deploy with a public backend URL.
