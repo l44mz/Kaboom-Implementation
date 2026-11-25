@@ -5,7 +5,15 @@
 
 # 1. Build the Flutter web app.
 #    API_BASE_URL=/api/v1 means "the same server that sent the page".
-FROM ghcr.io/cirruslabs/flutter:stable AS web
+#    Flutter is pinned to the version the team uses (pubspec needs Dart ^3.13.4).
+FROM debian:bookworm-slim AS web
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git curl unzip xz-utils ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+ARG FLUTTER_VERSION=3.47.8
+RUN git clone --depth 1 --branch ${FLUTTER_VERSION} https://github.com/flutter/flutter.git /flutter
+ENV PATH="/flutter/bin:${PATH}"
+RUN flutter config --no-analytics && flutter precache --web
 WORKDIR /web
 COPY frontend/ .
 RUN flutter pub get && flutter build web --release --dart-define=API_BASE_URL=/api/v1
