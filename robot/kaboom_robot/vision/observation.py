@@ -13,6 +13,13 @@ class FaceObservation:
     yaw: float | None = None
     pitch: float | None = None
     roll: float | None = None
+    # Where the irises point, split into left/right (x) and up/down (y), in eye widths.
+    # `gaze` above is the length of this arrow.
+    gaze_x: float | None = None
+    gaze_y: float | None = None
+    # Eye openness compared with this user's own open eyes (1.0 = normal).
+    # Set by the Baseline, so people with narrower eyes are judged fairly.
+    ear_ratio: float | None = None
 
 
 NO_FACE = FaceObservation(face_present=False)

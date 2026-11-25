@@ -35,7 +35,9 @@ class FaceTracker:
             # VIDEO mode: we call it once per frame and wait for the answer.
             # Simpler than the sample's LIVE_STREAM callback, and fast enough on a Pi 4.
             running_mode=vision.RunningMode.VIDEO,
-            num_faces=1,
+            # Two faces, so we can keep the user (the biggest, closest one) and ignore
+            # someone walking behind them.
+            num_faces=2,
             min_face_detection_confidence=min_detection_confidence,
             min_face_presence_confidence=min_presence_confidence,
             min_tracking_confidence=min_tracking_confidence,
@@ -59,10 +61,13 @@ class FaceTracker:
         if not result.face_landmarks:
             return NO_FACE
 
-        pixels = metrics.to_pixels(result.face_landmarks[0], width, height)
+        faces = [metrics.to_pixels(face, width, height) for face in result.face_landmarks]
+        index = metrics.largest_face(faces)
+        pixels = faces[index]
         yaw = pitch = roll = None
-        if result.facial_transformation_matrixes:
-            yaw, pitch, roll = metrics.head_angles(result.facial_transformation_matrixes[0])
+        if index < len(result.facial_transformation_matrixes):
+            yaw, pitch, roll = metrics.head_angles(result.facial_transformation_matrixes[index])
+        vector = metrics.mean_gaze_vector(pixels)
 
         return FaceObservation(
             face_present=True,
@@ -71,6 +76,8 @@ class FaceTracker:
             yaw=yaw,
             pitch=pitch,
             roll=roll,
+            gaze_x=None if vector is None else vector[0],
+            gaze_y=None if vector is None else vector[1],
         )
 
     def close(self) -> None:

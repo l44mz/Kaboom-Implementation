@@ -12,8 +12,10 @@ import '../services/admin_service.dart';
 /// Used by two screens at the same time (the dashboard, and the form on top of it),
 /// so each screen registers its own copy with a tag.
 class AdminController extends GetxController {
-  AdminController({TokenStorage? tokens}) : _tokens = tokens ?? TokenStorage() {
-    _service = AdminService(ApiClient(_tokens));
+  /// [api] is for tests (a fake backend); the app leaves it empty.
+  AdminController({TokenStorage? tokens, ApiClient? api})
+      : _tokens = tokens ?? TokenStorage() {
+    _service = AdminService(api ?? ApiClient(_tokens));
   }
 
   final TokenStorage _tokens;

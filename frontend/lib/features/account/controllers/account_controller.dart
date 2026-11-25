@@ -10,6 +10,7 @@ import '../../history/models/history.dart';
 import '../../history/services/history_service.dart';
 import '../models/robot_info.dart';
 import '../services/account_service.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 /// Logic and state for My Account.
 /// The profile and coins come from the shared [UserController], so they match the side menu.
@@ -124,8 +125,7 @@ class AccountController extends GetxController {
     return null;
   }
 
-  static String? validateNewPassword(String? value) {
-    if ((value ?? '').length < 8) return 'Use at least 8 characters';
-    return null;
-  }
+  /// Same rules as Sign Up (and the backend), kept in one place.
+  static String? validateNewPassword(String? value) =>
+      AuthController.validateNewPassword(value);
 }

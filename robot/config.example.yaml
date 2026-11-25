@@ -10,8 +10,10 @@ vision:
   model_path: models/face_landmarker.task
   calibration_s: 3    # seconds to learn the user's normal working pose
   thresholds:
-    ear_closed: 0.15
+    ear_closed: 0.15        # eyes closed below this EAR (only before calibration)
+    ear_closed_ratio: 0.6   # after calibration: closed under 60% of the user's own open eyes
     gaze_off: 0.20
+    smoothing_s: 0.15       # averages the numbers over this long so they don't flicker (0 = off)
     yaw_deg: 30
     pitch_deg: 20
     roll_deg: 30
@@ -23,5 +25,7 @@ vision:
 
 api:
   base_url: http://localhost:8080/api/v1   # on the Pi: the laptop's IP, e.g. http://192.168.43.20:8080/api/v1
-  robot_id: ""        # this robot's id from the backend's robots table
   poll_s: 3           # seconds between "is there a session?" checks
+  # No robot_id any more: the robot pairs with a code shown on its screen, and saves its id
+  # and tokens in ~/.kaboom_robot/device_tokens.json.
+  # serial_number: ""  # optional; default is the Pi's own serial (python -m kaboom_robot.device_id)

@@ -1,0 +1,15 @@
+# Keep the Docker build small: only backend/ and frontend/ sources are needed.
+.git
+.github
+docs
+robot
+**/.env
+**/node_modules
+backend/target
+frontend/build
+frontend/.dart_tool
+frontend/android
+frontend/ios
+frontend/linux
+frontend/macos
+frontend/windows

@@ -1,0 +1,102 @@
+# Runs the tests on GitHub's computers on every push and pull request,
+# so nobody needs Docker or a lot of RAM on their laptop.
+# Results: the "Actions" tab on GitHub, and a green tick / red cross on each PR.
+name: Tests
+
+on:
+  push:
+    branches: [develop, main, master]
+  pull_request:
+  workflow_dispatch: # also a "Run workflow" button in the Actions tab
+
+jobs:
+  backend:
+    name: Backend (JUnit + integration)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    # A MySQL for KaboomApplicationTests (it starts the whole app with the normal settings).
+    # The *IntegrationTest classes start their own MySQL with Testcontainers;
+    # Docker is already installed on GitHub's ubuntu machines.
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: kaboom_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_URL: jdbc:mysql://localhost:3306/kaboom_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DB_USERNAME: root
+      DB_PASSWORD: root
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run all backend tests
+        run: |
+          chmod +x mvnw
+          ./mvnw -B test
+
+      - name: Keep the test reports if something failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: backend/target/surefire-reports/
+
+  frontend:
+    name: App (flutter test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Run the app tests
+        run: flutter test
+
+  robot:
+    name: Robot (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: robot
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The tests only check the vision logic (state machine, scoring, metrics, config),
+      # so they need no camera, screen or MediaPipe.
+      - name: Install test packages
+        run: pip install numpy pyyaml pytest
+
+      - name: Run the robot tests
+        run: python -m pytest -v

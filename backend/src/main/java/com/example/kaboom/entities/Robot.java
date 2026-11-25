@@ -19,6 +19,14 @@ public class Robot {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
+    /**
+     * The Pi's own serial number, sent by the robot when it asks for a pairing code.
+     * Nullable so robots added before pairing existed still load (MySQL allows many NULLs
+     * in a unique column).
+     */
+    @Column(name = "serial_number", unique = true, length = 100)
+    private String serialNumber;
+
     @OneToOne
     @JoinColumn(name = "user_id", unique = true, nullable = false)
     private User user;

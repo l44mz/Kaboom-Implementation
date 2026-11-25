@@ -242,7 +242,11 @@ class _AccountScreenState extends State<AccountScreen> {
                       ? 'Connected'
                       : 'Offline',
               valueColor: robot?.connected ?? false ? _connectedColor : AppColors.textMuted,
-              onTap: () => context.push(AppRoutes.robotPair),
+              onTap: () async {
+                // Connect Robot answers true when a robot was added: show it here.
+                final added = await context.push<bool>(AppRoutes.robotPair);
+                if (added == true) _controller.load();
+              },
             ),
           ],
         ),

@@ -9,9 +9,10 @@ import '../services/auth_service.dart';
 
 /// Logic and state for the Sign Up and Login screens.
 class AuthController extends GetxController {
-  AuthController({TokenStorage? tokens})
+  /// [api] is for tests (a fake backend); the app leaves it empty.
+  AuthController({TokenStorage? tokens, ApiClient? api})
       : _tokens = tokens ?? TokenStorage() {
-    _authService = AuthService(ApiClient(_tokens));
+    _authService = AuthService(api ?? ApiClient(_tokens));
   }
 
   final TokenStorage _tokens;
@@ -40,11 +41,21 @@ class AuthController extends GetxController {
   }
 
  
+  /// New password rules, the same as the backend (UserServices.isValidPassword):
+  /// 12-64 characters, a lowercase letter, a capital letter, a number,
+  /// a symbol from @#\$%^&+=()!*_- and no spaces.
   static String? validateNewPassword(String? value) {
     final password = value ?? '';
     if (password.isEmpty) return 'Please enter a password';
-    if (password.length < 8) return 'Password must be at least 8 characters';
-    if (!RegExp(r'\d').hasMatch(password)) return 'Password must contain at least one number';
+    if (password.length < 12) return 'Password must be at least 12 characters';
+    if (password.length > 64) return 'Password must be 64 characters or less';
+    if (RegExp(r'\s').hasMatch(password)) return 'Password can\'t contain spaces';
+    if (!RegExp(r'[a-z]').hasMatch(password)) return 'Add a lowercase letter';
+    if (!RegExp(r'[A-Z]').hasMatch(password)) return 'Add a capital letter';
+    if (!RegExp(r'\d').hasMatch(password)) return 'Add a number';
+    if (!RegExp(r'[@#$%^&+=()!*_\-]').hasMatch(password)) {
+      return 'Add a symbol, like ! @ # or _';
+    }
     return null;
   }
 

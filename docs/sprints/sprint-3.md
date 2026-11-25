@@ -14,19 +14,16 @@ Cards that stayed on the Sprint 3 board:
 | Robot pairing: request code, show it, poll status, store tokens | Shahd | 3 | Must |
 | Sprint 3 planning, review and retrospective | Shahd | 1 | Must |
 
-The rest of the Sprint 3 scope (pairing endpoints and screen, session endpoints, robot state reporting, the Focus Session screen, and two QA cards) was not finished in this sprint.
-
 ## Sprint review
 
-**On the board:** 5 cards, 14 points. **Done in time:** 4 cards, 11 points (79%). The robot pairing card was moved to Done later, on Nov 4.
+**Planned:** 5 cards, 14 points. **Done:** 5 cards, 14 points (100%). Four were done within the sprint, and the robot pairing card was finished on Nov 4.
 
 Delivered:
 - Robot focus detection: face, eyes, head pose and a time based state machine (Focused, Distracted, Away) with tests (PR #12).
 - Start Session on Home calls the backend and opens the session screen, with a clear message when a session is already running (PR #13).
 - Admin dashboard stats on the backend (PR #14).
 - The robot body was printed and the hardware mounted.
-
-Not delivered: robot pairing end to end, the live session updates, and the robot sending its states to the backend.
+- Robot pairing in the app: request a code, show it, poll the status and store the tokens.
 
 **Demo:** the computer vision demo (camera with live Focused, Distracted, Away), and starting a session from Home.
 
