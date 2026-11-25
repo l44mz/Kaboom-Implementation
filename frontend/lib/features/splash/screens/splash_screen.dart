@@ -7,13 +7,24 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/animated_robot_face.dart';
 
-/// The first screen when the app opens: Sparky pops in, "KABOOM!" and the
-/// tagline slide up, three dots pulse, then the app goes to Sign Up.
+/// The first screen every time the app opens: Sparky pops in, "KABOOM!" and the
+/// tagline slide up, three dots pulse, then the app goes to [next] (or Sign Up).
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key, this.duration = const Duration(milliseconds: 2400)});
+  const SplashScreen({
+    super.key,
+    this.duration = const Duration(milliseconds: 2400),
+    this.next,
+  });
+
+  /// True once the splash has been shown in this run of the app, so the router
+  /// stops sending pages here (see splashFirst in app_router.dart).
+  static bool shown = false;
 
   /// How long the splash stays before moving on.
   final Duration duration;
+
+  /// The page the app was opened on (e.g. "/home"); null or unknown means Sign Up.
+  final String? next;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -45,6 +56,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    SplashScreen.shown = true;
     _timer = Timer(widget.duration, _goNext);
   }
 
@@ -63,7 +75,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   void _goNext() {
-    if (mounted) context.go(AppRoutes.signUp);
+    if (!mounted) return;
+    // Only pages inside the app ("/..."), and never the splash again.
+    final next = widget.next;
+    final ok = next != null &&
+        next.startsWith('/') &&
+        !next.startsWith('//') &&
+        !next.startsWith(AppRoutes.splash);
+    context.go(ok ? next : AppRoutes.signUp);
   }
 
   @override
