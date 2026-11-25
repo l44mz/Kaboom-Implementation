@@ -43,6 +43,7 @@ dependencies:
   get: ^4.7.3
   camera: ^0.12.2
   google_mlkit_face_detection: ^1.0.3
+  web: ^1.1.1 # camera mode on the website (browser camera + MediaPipe)
   wakelock_plus: ^1.8.2
 
 dev_dependencies:
