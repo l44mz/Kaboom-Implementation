@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
@@ -64,11 +65,14 @@ class FocusModeScreen extends StatelessWidget {
                 _ModeCard(
                   icon: Icons.phone_android,
                   title: 'Phone camera',
-                  description: "No robot needed. Your phone's front camera watches you, "
-                      "and the phone shows Sparky's face. Put the phone on a stand facing you.",
+                  description: kIsWeb
+                      ? "No robot needed. Your computer's camera watches you, "
+                          "and the screen shows Sparky's face. Sit facing the camera."
+                      : "No robot needed. Your phone's front camera watches you, "
+                          "and the phone shows Sparky's face. Put the phone on a stand facing you.",
                   selected: mode == FocusMode.phone,
                   enabled: FocusModeController.phoneSupported,
-                  disabledNote: 'Only in the Android and iOS app.',
+                  disabledNote: 'Only in the phone app and on the website.',
                   onTap: () => modes.choose(FocusMode.phone),
                   action: FocusModeController.phoneSupported
                       ? TextButton.icon(
@@ -80,7 +84,7 @@ class FocusModeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Camera mode checks your focus on the phone itself. '
+                  'Camera mode checks your focus on your phone or computer itself. '
                   'No video is sent anywhere, only Focused, Distracted or Away.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: AppColors.textMuted),

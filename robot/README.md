@@ -82,7 +82,7 @@ python -m kaboom_robot.vision.accuracy --user "User 1"
 
 Keys in the window: `f` really focused, `d` really distracted, `a` really away, `q` stop.
 At the end it prints the score and saves a CSV and a Markdown report in `recordings/`.
-The robot is allowed its normal waiting time after each change (5 s for distracted, 8 s for
+The robot is allowed its normal waiting time after each change (5 s for distracted, 3 s for
 away), so that time is not counted as a mistake, and a glance shorter than that is not a miss.
 
 Score several recordings together (for example, all 5 test users):

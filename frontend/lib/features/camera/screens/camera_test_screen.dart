@@ -2,9 +2,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../services/phone_focus_detector.dart';
+import '../services/focus_detector.dart';
 
-/// "Test the camera": shows what the phone sees and what it decides, live.
+/// "Test the camera": shows what the camera sees and what it decides, live
+/// (on a phone or on the website).
 /// Used to check camera mode before a real session, and to see why the
 /// state changes (the head angles, the eyes, and the reasons).
 class CameraTestScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class CameraTestScreen extends StatefulWidget {
 }
 
 class _CameraTestScreenState extends State<CameraTestScreen> {
-  final _detector = PhoneFocusDetector();
+  final _detector = FocusDetector();
   String? _error;
   bool _starting = true;
 
@@ -30,7 +31,7 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
       await _detector.start();
     } on CameraException catch (e) {
       _error = e.code == 'CameraAccessDenied'
-          ? 'Kaboom needs the camera. Allow it in the phone settings, then try again.'
+          ? 'Kaboom needs the camera. Allow it in the phone or browser settings, then try again.'
           : 'Could not open the camera (${e.code}).';
     } catch (e) {
       _error = 'Could not open the camera: $e';
@@ -68,8 +69,6 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
         ),
       );
     }
-    final camera = _detector.camera!;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
@@ -80,8 +79,8 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
             child: SizedBox(
               width: 200,
               child: AspectRatio(
-                aspectRatio: 1 / camera.value.aspectRatio, // portrait
-                child: CameraPreview(camera),
+                aspectRatio: _detector.previewAspectRatio,
+                child: _detector.buildPreview(),
               ),
             ),
           ),
@@ -155,7 +154,7 @@ class _ReadingView extends StatelessWidget {
         const SizedBox(height: 12),
         const Text(
           'Distracted after 5 s with the head turned or 3 s with the eyes closed. '
-          'Away after 8 s with no face. The angles are measured from your working pose.',
+          'Away after 3 s with no face. The angles are measured from your working pose.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, color: AppColors.textMuted),
         ),

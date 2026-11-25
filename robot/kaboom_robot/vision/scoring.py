@@ -4,7 +4,7 @@ During a test session a person says what the user is really doing (the "truth":
 FOCUSED, DISTRACTED or AWAY) while the robot logs what it detected. This module
 compares the two. No camera and no MediaPipe here, so it is easy to test.
 
-The robot is slow on purpose: it waits 5 s before saying DISTRACTED and 8 s before
+The robot is slow on purpose: it waits 5 s before saying DISTRACTED and 3 s before
 AWAY, so a blink or a quick glance does not count. So right after the truth changes,
 we give the robot that much time before we start comparing. Those frames are counted
 as "waiting", not as mistakes.

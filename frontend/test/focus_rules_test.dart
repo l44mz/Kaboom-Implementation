@@ -78,10 +78,10 @@ void main() {
     expect(r.reasons, contains('eyes closed'));
   });
 
-  test('leaving the desk is away', () {
+  test('leaving the desk is away after 3 seconds', () {
     final r = timersOnly();
-    final t = run(r, noFace, 0, 7);
-    expect(r.state, FocusState.focused);
+    final t = run(r, noFace, 0, 2);
+    expect(r.state, FocusState.focused); // 2 s: not away yet
     run(r, noFace, t, 1.5);
     expect(r.state, FocusState.away);
   });
@@ -119,9 +119,9 @@ void main() {
   test('losing the face while distracted stays distracted until away', () {
     final r = timersOnly();
     var t = run(r, headTurned, 0, 6);
-    t = run(r, noFace, t, 5);
+    t = run(r, noFace, t, 2);
     expect(r.state, FocusState.distracted);
-    run(r, noFace, t, 4);
+    run(r, noFace, t, 1.5);
     expect(r.state, FocusState.away);
   });
 
