@@ -36,11 +36,12 @@ class FocusModeController extends GetxController {
       ? Get.find<FocusModeController>()
       : Get.put(FocusModeController(), permanent: true);
 
-  /// Phone mode needs the camera and ML Kit, which only work in the Android and iOS apps.
+  /// Camera mode works in the Android and iOS apps (ML Kit) and on the website
+  /// (MediaPipe in the browser). Not in the Windows, macOS or Linux apps.
   static bool get phoneSupported =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   bool get usesPhone => mode.value == FocusMode.phone;
 

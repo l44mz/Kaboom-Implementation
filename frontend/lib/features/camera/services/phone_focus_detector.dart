@@ -4,26 +4,16 @@ import 'dart:io' show Platform;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 import '../../session/models/focus_state.dart';
 import '../focus/face_observation.dart';
 import '../focus/focus_rules.dart';
+import 'focus_detector.dart';
 
-/// One result from the camera: the state, and the numbers behind it (for the test screen).
-class FocusReading {
-  const FocusReading({
-    required this.state,
-    required this.observation,
-    required this.reasons,
-    required this.calibrated,
-  });
-
-  final FocusState state;
-  final FaceObservation observation;
-  final List<String> reasons;
-  final bool calibrated;
-}
+/// Used by [FocusDetector] in the Android and iOS apps.
+FocusDetector createFocusDetector() => PhoneFocusDetector();
 
 /// Watches the user with the phone's front camera and decides FOCUSED, DISTRACTED or AWAY.
 ///
@@ -32,7 +22,7 @@ class FocusReading {
 /// 3. FocusRules (the same rules as Sparky) turns that into a state.
 ///
 /// Everything runs on the phone. No picture leaves it.
-class PhoneFocusDetector {
+class PhoneFocusDetector implements FocusDetector {
   PhoneFocusDetector({FocusRules? rules}) : rules = rules ?? FocusRules();
 
   final FocusRules rules;
@@ -58,22 +48,33 @@ class PhoneFocusDetector {
   /// The camera, for the preview on screen. Null until [start] finishes.
   CameraController? get camera => _camera;
 
-  /// What went wrong, if frames can't be checked (shown on the test screen).
-  /// Null while everything works.
+  @override
   final problem = ValueNotifier<String?>(null);
 
-  /// Frames the camera has sent so far (to tell "no frames" from "frames rejected").
+  @override
   int framesReceived = 0;
 
-  /// A new reading after every checked frame.
+  @override
   Stream<FocusReading> get readings => _readings.stream;
 
-  /// Only the state, and only when it changes.
+  @override
   Stream<FocusState> get states => readings.map((r) => r.state).distinct();
 
-  /// Opens the front camera and starts checking frames.
+  @override
+  bool get isRunning => _camera?.value.isInitialized ?? false;
+
+  /// The camera's aspect ratio is for landscape; the phone is held upright.
+  @override
+  double get previewAspectRatio => 1 / (_camera?.value.aspectRatio ?? 4 / 3);
+
+  @override
+  Widget buildPreview() {
+    final camera = _camera;
+    return camera == null ? const SizedBox.shrink() : CameraPreview(camera);
+  }
+
   /// Android asks the user for the camera permission the first time.
-  /// Throws a CameraException if there is no camera or the permission is refused.
+  @override
   Future<void> start() async {
     final cameras = await availableCameras();
     if (cameras.isEmpty) {
@@ -96,7 +97,7 @@ class PhoneFocusDetector {
     await controller.startImageStream(_onFrame);
   }
 
-  /// Stops the camera (for example when the session is paused or ends).
+  @override
   Future<void> stop() async {
     final controller = _camera;
     _camera = null;
@@ -105,7 +106,7 @@ class PhoneFocusDetector {
     await controller.dispose();
   }
 
-  /// Stops everything. The detector can't be used again after this.
+  @override
   Future<void> dispose() async {
     await stop();
     await _faces.close();

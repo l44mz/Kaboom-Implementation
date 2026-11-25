@@ -69,10 +69,10 @@ def test_eyes_closed_for_3_seconds_is_distracted():
     assert "eyes closed" in m.reasons
 
 
-def test_leaving_the_desk_is_away():
+def test_leaving_the_desk_is_away_after_3_seconds():
     m = FocusStateMachine()
-    state, t = run(m, NO_FACE, 0, 7)
-    assert state == FocusState.FOCUSED
+    state, t = run(m, NO_FACE, 0, 2)
+    assert state == FocusState.FOCUSED  # 2 s: not away yet
     state, _ = run(m, NO_FACE, t, 1.5)
     assert state == FocusState.AWAY
 
@@ -111,9 +111,9 @@ def test_one_lost_frame_does_not_restart_the_distraction_clock():
 def test_losing_the_face_while_distracted_stays_distracted_until_away():
     m = FocusStateMachine()
     _, t = run(m, HEAD_TURNED, 0, 6)
-    state, t = run(m, NO_FACE, t, 5)
+    state, t = run(m, NO_FACE, t, 2)
     assert state == FocusState.DISTRACTED
-    state, _ = run(m, NO_FACE, t, 4)
+    state, _ = run(m, NO_FACE, t, 1.5)
     assert state == FocusState.AWAY
 
 

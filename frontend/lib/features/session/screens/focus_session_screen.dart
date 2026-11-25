@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:camera/camera.dart';
+import 'package:camera/camera.dart' show CameraException;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:get/get.dart';
@@ -16,7 +16,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/controllers/user_controller.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/robot_face.dart';
-import '../../camera/services/phone_focus_detector.dart';
+import '../../camera/services/focus_detector.dart';
 import '../models/focus_session.dart';
 import '../models/focus_state.dart';
 import '../models/session_clock.dart';
@@ -27,7 +27,7 @@ import '../services/session_service.dart';
 /// The running session (Figma "Focused / Distracted / Away Status In Session").
 ///
 /// Robot mode: Sparky watches and sends the states; this screen asks the backend for them.
-/// Camera mode: the phone's front camera watches (PhoneFocusDetector); this screen
+/// Camera mode: the front camera of the phone or computer watches (FocusDetector); this screen
 /// shows the states and sends them to the backend itself.
 class FocusSessionScreen extends StatefulWidget {
   const FocusSessionScreen({super.key, this.session, this.states, this.service});
@@ -74,7 +74,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
   // ---- Camera mode only ----
 
   /// Watches the user with the front camera. Null in robot mode.
-  PhoneFocusDetector? _detector;
+  FocusDetector? _detector;
   StreamSubscription<FocusState>? _cameraSub;
   Timer? _heartbeat;
   bool _cameraStarting = false;
@@ -156,7 +156,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
   Future<void> _startCamera() async {
     if (_cameraStarting || _finishing) return;
     _cameraStarting = true;
-    final detector = _detector ??= PhoneFocusDetector();
+    final detector = _detector ??= FocusDetector();
     try {
       await detector.start(); // asks for the camera permission the first time
       _cameraSub ??= detector.states.listen((state) {
@@ -167,7 +167,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     } on CameraException catch (e) {
       if (mounted) {
         setState(() => _cameraProblem = e.code == 'CameraAccessDenied'
-            ? 'Kaboom needs the camera to watch your focus. Allow it in the phone settings.'
+            ? 'Kaboom needs the camera to watch your focus. Allow it in the phone or browser settings.'
             : 'The camera could not start (${e.code}).');
       }
     } catch (e) {
@@ -197,7 +197,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     if (lifecycle == AppLifecycleState.paused) {
       unawaited(detector.stop());
       setState(() {}); // hide the preview of the stopped camera
-    } else if (lifecycle == AppLifecycleState.resumed && detector.camera == null) {
+    } else if (lifecycle == AppLifecycleState.resumed && !detector.isRunning) {
       unawaited(_startCamera());
     }
   }
@@ -483,7 +483,7 @@ class _Shake extends StatelessWidget {
 class _CameraBadge extends StatelessWidget {
   const _CameraBadge({required this.detector, required this.problem});
 
-  final PhoneFocusDetector? detector;
+  final FocusDetector? detector;
   final String? problem;
 
   @override
@@ -496,8 +496,8 @@ class _CameraBadge extends StatelessWidget {
         style: const TextStyle(fontSize: 12, color: AppColors.away),
       );
     }
-    final camera = detector?.camera;
-    if (camera == null || !camera.value.isInitialized) {
+    final camera = detector;
+    if (camera == null || !camera.isRunning) {
       return const SizedBox(width: 64, height: 64);
     }
     return ClipOval(
@@ -508,8 +508,8 @@ class _CameraBadge extends StatelessWidget {
           fit: BoxFit.cover,
           child: SizedBox(
             width: 100,
-            height: 100 * camera.value.aspectRatio,
-            child: CameraPreview(camera),
+            height: 100 / camera.previewAspectRatio,
+            child: camera.buildPreview(),
           ),
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/account/screens/account_screen.dart';
@@ -35,11 +36,26 @@ class AppRoutes {
   static const account = '/account';
 }
 
+/// Every app start goes through the splash first, even when the link already names a
+/// page (e.g. reloading `https://<site>/#/signup`). The splash then opens that page.
+String? splashFirst(BuildContext context, GoRouterState state) {
+  if (SplashScreen.shown || state.matchedLocation == AppRoutes.splash) return null;
+  return Uri(
+    path: AppRoutes.splash,
+    queryParameters: {'next': state.uri.toString()},
+  ).toString();
+}
+
 final appRouter = GoRouter(
   // The app opens on the splash screen; it moves on to Sign Up by itself.
   initialLocation: AppRoutes.splash,
+  redirect: splashFirst,
   routes: [
-    GoRoute(path: AppRoutes.splash, builder: (context, state) => const SplashScreen()),
+    GoRoute(
+      path: AppRoutes.splash,
+      // next = the page the app was opened on, shown after the splash.
+      builder: (context, state) => SplashScreen(next: state.uri.queryParameters['next']),
+    ),
     GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginScreen()),
     GoRoute(path: AppRoutes.signUp, builder: (context, state) => const SignUpScreen()),
     GoRoute(path: AppRoutes.home, builder: (context, state) => const HomeScreen()),
