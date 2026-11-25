@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>كابووم | Kaboom</title>
+<meta name="description" content="خليك مركّز ولا سباركي بيصير له كابووم! تطبيق تركيز مع سباركي، مع روبوت على مكتبك أو بكاميرا جوالك.">
+<meta name="theme-color" content="#07081A">
+<meta property="og:title" content="كابووم | Kaboom">
+<meta property="og:description" content="خليك مركّز ولا سباركي بيصير له كابووم!">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@sparkykaboom">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght,HEXP@160..700,0..100&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a dark glass stage. Glowing Volt→Violet rings (Sparky's focus ring) orbit him in the hero; frosted cards, a live session you can fail, a mood viewer, a try-on shop. */
+:root{
+  --void:#07081A; --bezel:#0B0C24; --screen:#0E0F2E; --night:#21236A; --deep:#191A52;
+  --volt:#4F6BFF; --violet:#8B5CF6; --violet-hi:#C8B5FF; --haze:#9CA3D4; --mist:#C9CDEB;
+  --spark:#38BDF8; --coin:#F5C542; --paper:#F4F4FB;
+  --glass:linear-gradient(180deg,rgba(79,107,255,.10),rgba(14,15,46,.55));
+  --edge:rgba(156,163,212,.18); --edge-hi:rgba(124,140,255,.55);
+  --charge:linear-gradient(90deg,var(--volt),var(--violet));
+  --sans:'Readex Pro',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--paper);font-family:var(--sans);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--void)}
+a{color:inherit}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{text-wrap:balance}
+button{font-family:inherit}
+#page[data-lang="en"] [lang="ar"],#page[data-lang="ar"] [lang="en"]{display:none!important}
+#page[data-lang="ar"] *{letter-spacing:0!important}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(clamp(28px,5.5vw,72px),env(safe-area-inset-left,0px));padding-right:max(clamp(28px,5.5vw,72px),env(safe-area-inset-right,0px))}
+@media (max-width:520px){.wrap{padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px))}}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wide{font-variation-settings:"HEXP" 100}
+#page[data-lang="ar"] .wide{font-variation-settings:"HEXP" 35}
+.grad{background:linear-gradient(90deg,#8EA0FF,var(--violet) 55%,var(--violet-hi));-webkit-background-clip:text;background-clip:text;color:transparent;padding-block:.12em .28em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.flip{display:inline-block}
+.cf{position:absolute;left:50%;top:42%;width:9px;height:14px;border-radius:2px;pointer-events:none;z-index:5}
+.line2{display:block;margin-top:.3em}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+
+@keyframes kbBlink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+@keyframes kbShake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px) rotate(-2deg)}40%{transform:translate(5px,-4px) rotate(2deg)}60%{transform:translate(-4px,-2px)}80%{transform:translate(3px,4px) rotate(-1deg)}}
+@keyframes kbPulse{0%,100%{filter:drop-shadow(0 0 0 rgba(139,92,246,0))}50%{filter:drop-shadow(0 0 22px rgba(139,92,246,.9))}}
+@keyframes kbBurst{0%{transform:scale(.1) rotate(-20deg);opacity:0}35%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes kbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes rise{0%{opacity:0;transform:translate(-50%,0)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-60px)}}
+
+/* glass + controls */
+.glass{background:var(--glass);border:1px solid var(--edge);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.spot{position:relative;isolation:isolate}
+.spot::after{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:radial-gradient(260px circle at var(--mx,50%) var(--my,-40%),rgba(139,92,246,.9),rgba(79,107,255,.5) 40%,transparent 70%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.9}
+.spot::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(320px circle at var(--mx,50%) var(--my,-40%),rgba(79,107,255,.14),transparent 70%);pointer-events:none;z-index:-1}
+.chip{display:inline-flex;align-items:center;gap:10px;padding:6px 16px 6px 6px;border-radius:999px;font-size:14px;color:var(--mist)}
+[dir="rtl"] .chip{padding:6px 6px 6px 16px}
+.chip i{width:24px;height:24px;border-radius:50%;background:var(--charge);display:grid;place-items:center;color:#fff;font-style:normal;font-size:12px}
+.chip.small{padding:5px 14px;font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 26px;border-radius:999px;font:600 15px/1 var(--sans);color:var(--paper);text-decoration:none;cursor:pointer;white-space:nowrap;border:1.5px solid transparent;transition:box-shadow .25s ease,transform .2s ease,filter .2s ease}
+.btn-glow{background:linear-gradient(var(--screen),var(--screen)) padding-box,var(--charge) border-box;box-shadow:0 0 24px rgba(139,92,246,.3)}
+.btn-glow:hover{box-shadow:0 0 40px rgba(139,92,246,.6);transform:translateY(-1px)}
+.btn-fill{background:var(--charge);color:#fff;box-shadow:0 0 30px rgba(79,107,255,.45)}
+.btn-fill:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn-quiet{background:rgba(14,15,46,.6);border-color:var(--edge)}
+.btn-quiet:hover{border-color:var(--edge-hi)}
+.btn[disabled]{opacity:.4;cursor:default;transform:none;box-shadow:none;filter:none}
+.btn:focus-visible,.seg button:focus-visible,.mood:focus-visible,.item:focus-visible,.lang:focus-visible,.navlinks a:focus-visible,#heroFace:focus-visible{outline:2px solid var(--spark);outline-offset:3px}
+
+/* nav */
+.navbar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 20px);z-index:50;margin-top:24px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px 10px 20px;border-radius:22px}
+[dir="rtl"] .nav{padding:10px 20px 10px 12px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand .mk{width:38px}
+.brand b{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.navlinks{display:flex;align-items:center;gap:26px;font-size:14px;color:var(--mist)}
+.navlinks a{text-decoration:none}.navlinks a:hover{color:#fff}
+.navend{display:flex;align-items:center;gap:8px}
+.lang{height:40px;padding:0 14px;border-radius:999px;background:transparent;border:1px solid var(--edge);color:var(--mist);font-size:13px;font-weight:600;cursor:pointer}
+.lang:hover{color:#fff;border-color:var(--edge-hi)}
+.navend .btn{height:40px;padding:0 18px;font-size:14px}
+@media (max-width:820px){.navlinks{display:none}}
+@media (max-width:420px){.navend .btn{display:none}}
+
+/* hero */
+.hero{position:relative;padding-block:72px 40px;overflow:hidden;margin-top:-88px;padding-top:160px}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.hero canvas{-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
+.hero-in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:26px}
+.h1{display:flex;flex-direction:column;gap:6px;line-height:1}
+.h1 .l1{font-size:clamp(46px,8.2vw,112px);font-weight:700;letter-spacing:-.02em}
+.h1 .l2{font-size:clamp(28px,5vw,68px);font-weight:200;letter-spacing:-.01em}
+#page[data-lang="ar"] .h1{line-height:1.3;gap:0}
+#page[data-lang="ar"] .h1 .l1{font-size:clamp(52px,9vw,124px)}
+#page[data-lang="ar"] .h1 .l2{font-size:clamp(28px,4.8vw,64px);font-weight:300}
+.lede{max-width:58ch;color:var(--mist);font-size:18px}
+.ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.sparky{position:relative;width:min(380px,78vw);margin-top:18px;cursor:pointer;border-radius:30px}
+@keyframes backlight{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+.sparky::before{content:"";position:absolute;inset:-22% -16%;z-index:-1;border-radius:50%;background:radial-gradient(closest-side,rgba(130,148,255,.7),rgba(139,92,246,.35) 45%,rgba(56,189,248,.08) 70%,transparent 80%);filter:blur(28px);animation:backlight 4.5s ease-in-out infinite;pointer-events:none}
+.sparky .boop{position:absolute;left:50%;top:-6px;font:700 22px/1 var(--mono);color:var(--coin);pointer-events:none;animation:rise 1s ease-out forwards}
+.hint{font-size:13px;color:var(--haze)}
+
+/* sections */
+.sec{padding-block:110px 40px;position:relative}
+.sec-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;margin-bottom:56px}
+.h2{font-size:clamp(30px,4.6vw,56px);font-weight:600;line-height:1.15;letter-spacing:-.01em}
+.sub{color:var(--haze);max-width:60ch;font-size:17px}
+
+/* idea */
+.idea{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:center}
+.idea-text{display:flex;flex-direction:column;gap:16px}
+.idea-text h3{font-size:26px;font-weight:600}
+.idea-text p{color:var(--mist)}
+.facts{display:flex;gap:28px;flex-wrap:wrap;margin-top:8px}
+.facts div{display:flex;flex-direction:column}
+.facts b{font:700 30px/1.1 var(--mono);color:#fff}
+.facts span{font-size:13px;color:var(--haze)}
+.constel{position:relative;height:440px}
+.constel svg.lines{position:absolute;inset:0;width:100%;height:100%}
+.node{position:absolute;width:190px;animation:kbFloat 6s ease-in-out infinite}
+.node .card{padding:16px 18px;border-radius:18px;transition:transform .2s ease;transform-style:preserve-3d}
+.node b{display:block;font-size:17px;font-weight:600}
+.node span{font-size:13px;color:var(--haze)}
+.node .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(79,107,255,.18);color:#8EA0FF;margin-bottom:10px}
+.node .ic svg{width:20px}
+@media (max-width:900px){.idea{grid-template-columns:1fr}.constel{height:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.constel svg.lines{display:none}.node{position:static;width:auto;animation:none}}
+
+/* how */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.hc{padding:26px;border-radius:24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.hc .top{display:flex;justify-content:space-between;align-items:center}
+.hc .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(79,107,255,.35),rgba(139,92,246,.2));color:#fff;box-shadow:0 0 24px rgba(79,107,255,.25)}
+.hc .ic svg{width:24px}
+.hc .n{font-size:13px;color:var(--haze)}
+.hc h3{font-size:21px;font-weight:600}
+.hc p{font-size:15px;color:var(--mist)}
+.hc.hot .ic{background:linear-gradient(145deg,rgba(139,92,246,.55),rgba(139,92,246,.2));box-shadow:0 0 24px rgba(139,92,246,.4)}
+@media (max-width:960px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.cards{grid-template-columns:1fr}}
+
+/* demo */
+.demo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border-radius:32px;overflow:hidden;transition:box-shadow .4s ease}
+.demo.hot{box-shadow:0 0 80px rgba(139,92,246,.35)}
+.dl,.dr{padding:36px;display:flex;flex-direction:column;align-items:center;gap:18px;min-width:0}
+.dl{position:relative;background:radial-gradient(70% 60% at 50% 45%,rgba(79,107,255,.22),transparent 70%);transition:background .4s ease}
+.demo.hot .dl{background:radial-gradient(70% 60% at 50% 45%,rgba(139,92,246,.4),transparent 70%)}
+.dr{border-inline-start:1px solid var(--edge);justify-content:center}
+.dface{width:min(100%,360px);position:relative;isolation:isolate}
+.dface::before{content:"";position:absolute;inset:-18% -12%;z-index:-1;border-radius:50%;background:radial-gradient(closest-side,rgba(130,148,255,.7),rgba(139,92,246,.35) 45%,rgba(56,189,248,.08) 70%,transparent 80%);filter:blur(28px);animation:backlight 4.5s ease-in-out infinite;pointer-events:none;transition:background .4s ease}
+.demo.hot .dface::before{background:radial-gradient(closest-side,rgba(168,130,255,.85),rgba(139,92,246,.45) 50%,transparent 80%)}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:1.5px solid currentColor;border-radius:999px;font-size:14px;font-weight:500}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill span{color:var(--paper)}
+.say{font-size:22px;font-weight:600;text-align:center;min-height:1.5em}
+.bigring{position:relative;width:min(260px,70vw);aspect-ratio:1}
+.bigring svg{position:absolute;inset:0;width:100%;height:100%}
+.bigring .t{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.bigring .t b{font:700 clamp(40px,5vw,54px)/1 var(--mono)}
+.bigring .t span{font-size:13px;color:var(--haze)}
+.seg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:5px;border-radius:999px;background:rgba(7,8,26,.6);border:1px solid var(--edge)}
+.seg button{height:36px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:var(--mist);cursor:pointer;font-size:14px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--charge);color:#fff}
+.dbtns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.wallet{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--haze)}
+.wallet b{display:inline-flex;align-items:center;gap:6px;font:700 18px/1 var(--mono);color:var(--coin)}
+.wallet b i,.price i{width:12px;height:12px;border-radius:50%;background:var(--coin);box-shadow:0 0 10px rgba(245,197,66,.6)}
+.pop{animation:pop .35s ease}
+.note{font-size:13px;color:var(--haze);text-align:center;max-width:44ch}
+@media (max-width:860px){.demo{grid-template-columns:1fr}.dr{border-inline-start:0;border-top:1px solid var(--edge)}.dl,.dr{padding:28px 18px}}
+
+/* moods */
+.moods{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:stretch}
+.mstage{border-radius:28px;padding:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:380px}
+.mstage .f{width:min(100%,380px)}
+.mstage b{font-size:26px;font-weight:600}
+.mstage span{color:var(--haze);font-size:15px}
+.mlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start}
+.mood{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;cursor:pointer;color:var(--paper);text-align:start;font-size:15px;font-weight:500}
+.mood .mf{width:64px;flex-shrink:0}
+.mood[aria-pressed="true"]{border-color:var(--edge-hi);background:linear-gradient(180deg,rgba(79,107,255,.28),rgba(14,15,46,.6))}
+.mood:last-child{grid-column:1/-1}
+@media (max-width:860px){.moods{grid-template-columns:1fr}.mstage{min-height:0}}
+
+/* shop */
+.shopw{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:20px;align-items:start}
+.try{border-radius:28px;padding:30px;display:flex;flex-direction:column;align-items:center;gap:14px;position:sticky;top:110px}
+.try .f{width:min(100%,300px);height:250px;display:flex;align-items:center;justify-content:center}
+.try .f>div{width:100%}
+.try .cat{font-size:13px;color:var(--haze);display:flex;gap:8px;align-items:center}
+.rare{font:700 11px/1 var(--sans);padding:4px 8px;border-radius:999px;background:var(--violet);color:#fff}
+.try h3{font-size:26px;font-weight:600}
+.price{display:inline-flex;align-items:center;gap:7px;font:700 15px/1 var(--mono);color:var(--coin)}
+.try .btn{width:100%}
+.items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.item{padding:12px;border-radius:20px;display:flex;flex-direction:column;gap:8px;cursor:pointer;color:var(--paper);text-align:start;min-width:0}
+.item b{font-size:14px;font-weight:600}
+.item .st{font:700 12px/1 var(--mono)}
+.item[aria-pressed="true"]{border-color:var(--edge-hi);box-shadow:0 0 24px rgba(79,107,255,.3)}
+@media (max-width:900px){.shopw{grid-template-columns:1fr}.try{position:static}}
+@media (max-width:520px){.items{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* finale */
+.finale{position:relative;isolation:isolate;border-radius:36px;overflow:hidden;padding:72px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px}
+.finale canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1;opacity:.85}
+.finale .h2{font-size:clamp(34px,5.4vw,68px)}
+footer{padding-block:60px 56px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;padding:20px 24px;border-radius:22px;font-size:14px;color:var(--haze)}
+
+/* atmosphere: soft light rays behind everything */
+@keyframes sway{0%{opacity:.35;transform:rotate(16deg) translateX(0)}100%{opacity:1;transform:rotate(22deg) translateX(4vw)}}
+.atmo{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.atmo i{position:absolute;top:-25%;width:16vw;height:150%;background:linear-gradient(180deg,rgba(124,140,255,.17),rgba(139,92,246,.05) 55%,transparent 75%);filter:blur(34px);animation:sway 11s ease-in-out infinite alternate}
+.atmo i:nth-child(1){left:8%}.atmo i:nth-child(2){left:30%;width:10vw;animation-delay:-4s}.atmo i:nth-child(3){left:55%;animation-delay:-7s}.atmo i:nth-child(4){left:80%;width:12vw;animation-delay:-2s}
+.trust{font-size:13px;color:var(--haze);display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.trust span+span::before{content:"·";margin-inline-end:10px;opacity:.6}
+
+/* problem → answer */
+.vs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.vc{border-radius:28px;padding:34px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;min-width:0}
+.vc .scene{position:relative;width:min(100%,300px);padding:30px 26px 10px}
+.vc .float{position:absolute;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;animation:kbFloat 4s ease-in-out infinite}
+.vc .float svg{width:20px}
+.vc.bad .float{background:rgba(139,92,246,.22);color:var(--violet-hi)}
+.vc.good .float{background:rgba(79,107,255,.22);color:#9FB0FF}
+.vc h3{font-size:22px;font-weight:600;display:flex;align-items:center;gap:10px}
+.vc h3 i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:15px}
+.vc.bad h3 i{background:rgba(139,92,246,.3);color:var(--violet-hi)}
+.vc.good h3 i{background:rgba(56,189,248,.22);color:var(--spark)}
+.vc p{color:var(--mist);font-size:15px;max-width:40ch}
+.era{font-size:14px;font-weight:600;padding:6px 16px;border-radius:999px;letter-spacing:.02em}
+.vc.bad .era{background:rgba(139,92,246,.2);color:var(--violet-hi);border:1px solid rgba(139,92,246,.45)}
+.vc.good .era{background:var(--charge);color:#fff;box-shadow:0 0 22px rgba(79,107,255,.45)}
+.modes{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.modes>span{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;border:1px solid var(--edge-hi);background:rgba(79,107,255,.12);font-size:14px;font-weight:500}
+.modes i{width:18px;color:#9FB0FF;display:block}
+.vc.bad{background:linear-gradient(180deg,rgba(139,92,246,.14),rgba(14,15,46,.55))}
+@media (max-width:760px){.vs{grid-template-columns:1fr}}
+
+/* life cycle timeline */
+.tl{position:relative;display:flex;flex-direction:column;align-items:center;gap:64px;padding-block:10px;--p:0}
+.tl::before,.tl .fill{content:"";position:absolute;top:0;left:50%;width:3px;margin-left:-1.5px;border-radius:3px}
+.tl::before{bottom:0;background:rgba(156,163,212,.14)}
+.tl .fill{height:calc(var(--p)*100%);background:linear-gradient(180deg,var(--volt),var(--violet),var(--spark));box-shadow:0 0 18px rgba(139,92,246,.7)}
+.stage-step{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;max-width:360px;padding:18px;border-radius:28px;background:var(--void)}
+.medal{width:190px;height:190px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,rgba(79,107,255,.35),rgba(14,15,46,.9) 70%);border:1px solid var(--edge);transition:box-shadow .5s ease,transform .5s ease}
+.medal>div{width:130px}
+.stage-step.lit .medal{box-shadow:0 0 0 6px rgba(79,107,255,.12),0 0 60px rgba(79,107,255,.5);transform:scale(1.04)}
+.stage-step.boomy .medal{background:radial-gradient(circle at 50% 40%,rgba(139,92,246,.5),rgba(26,15,62,.95) 70%)}
+.stage-step.boomy.lit .medal{box-shadow:0 0 0 6px rgba(139,92,246,.15),0 0 70px rgba(139,92,246,.7)}
+.stage-step h3{font-size:24px;font-weight:600}
+.stage-step p{color:var(--mist);font-size:15px}
+.stage-step .mono{font-size:13px;color:var(--haze)}
+
+/* collection wall */
+.wall{border-radius:28px;padding:28px;display:flex;flex-direction:column;gap:22px}
+.wall-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.wall-stats{display:flex;gap:26px;flex-wrap:wrap}
+.wall-stats div{display:flex;flex-direction:column}
+.wall-stats b{font:700 28px/1.1 var(--mono)}
+.wall-stats span{font-size:13px;color:var(--haze)}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:end}
+.day{display:flex;flex-direction:column-reverse;gap:6px;align-items:center;min-width:0}
+.day>small{font-size:12px;color:var(--haze);margin-top:4px}
+.cell{width:100%;max-width:74px;padding:5px;border-radius:12px;border:1px solid var(--edge);background:rgba(14,15,46,.6);cursor:pointer;transition:transform .2s ease,border-color .2s ease}
+.cell:hover,.cell[aria-pressed="true"]{transform:translateY(-3px);border-color:var(--edge-hi)}
+.cell:focus-visible{outline:2px solid var(--spark);outline-offset:2px}
+.cell.lost{background:rgba(139,92,246,.18)}
+.wall.in .cell{animation:pop .45s ease backwards}
+.wall-info{min-height:1.6em;font-size:15px;color:var(--mist);text-align:center}
+.tag{font-size:12px;padding:4px 10px;border-radius:999px;border:1px dashed var(--edge-hi);color:var(--haze)}
+
+/* uses */
+.uses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.use{border-radius:26px;padding:28px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;min-width:0}
+.use .f{width:min(100%,190px)}
+.use h3{font-size:21px;font-weight:600}
+.use p{font-size:15px;color:var(--mist)}
+@media (max-width:860px){.uses{grid-template-columns:1fr;max-width:460px;margin-inline:auto}}
+
+/* socials */
+.socials{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.soc{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:999px;border:1px solid var(--edge);background:rgba(14,15,46,.55);color:var(--mist);text-decoration:none;font-size:14px;font-weight:500;transition:border-color .2s ease,color .2s ease,box-shadow .2s ease}
+.soc svg{width:18px;height:18px;display:block}
+.soc:hover{color:#fff;border-color:var(--edge-hi);box-shadow:0 0 22px rgba(79,107,255,.35)}
+.soc:focus-visible{outline:2px solid var(--spark);outline-offset:3px}
+.follow{font-size:14px;color:var(--haze);margin-top:6px}
+/* team */
+.team{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.member{border-radius:24px;padding:26px 18px 28px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;color:var(--paper);transition:transform .25s ease,box-shadow .25s ease}
+.member:hover{transform:translateY(-6px);border-color:var(--edge-hi)}
+.member .av{position:relative;isolation:isolate}
+.member .av::before{content:"";position:absolute;inset:-6% 4%;z-index:-1;border-radius:50%;background:radial-gradient(closest-side,rgba(79,107,255,.35),transparent 75%);filter:blur(18px)}
+.member .av{width:min(100%,220px);margin-bottom:14px}
+.member .av svg{animation:kbFloat 5s ease-in-out infinite}
+.member:nth-child(2) .av svg{animation-delay:-1.2s}.member:nth-child(3) .av svg{animation-delay:-2.4s}.member:nth-child(4) .av svg{animation-delay:-3.6s}
+.member b{font-size:20px;font-weight:600;line-height:1.35}
+.member .en-name{font-size:17px;font-weight:500;line-height:1.35;color:var(--mist)}
+.member .handle{font-size:15px;font-weight:500;margin-top:4px;color:var(--haze);font-family:var(--mono)}
+@media (max-width:900px){.team{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* faq */
+.faq{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.faq details{border-radius:20px;padding:0 22px}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:20px;font-size:17px;font-weight:600}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:400 26px/1 var(--sans);color:#9FB0FF;transition:transform .25s ease}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq summary:focus-visible{outline:2px solid var(--spark);outline-offset:4px;border-radius:8px}
+.faq details p{padding-bottom:20px;color:var(--mist);font-size:15px;max-width:66ch}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+
+</head>
+<body>
+<div id="page" data-lang="ar" dir="rtl">
+<div class="atmo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<div class="navbar wrap">
+  <nav class="nav glass" aria-label="Main">
+    <a class="brand" href="#top" aria-label="Kaboom">
+      <span class="mk" data-face="ready"></span>
+      <b><span lang="ar">كابووم</span><span lang="en">kaboom</span></b>
+    </a>
+    <div class="navlinks">
+      <a href="#how"><span lang="ar">كيف يشتغل</span><span lang="en">How it works</span></a>
+      <a href="#try"><span lang="ar">جرّبه</span><span lang="en">Try it</span></a>
+      <a href="#shop"><span lang="ar">المتجر</span><span lang="en">Shop</span></a>
+      <a href="#team"><span lang="ar">الفريق</span><span lang="en">Team</span></a>
+      <a href="#faq"><span lang="ar">الأسئلة</span><span lang="en">FAQ</span></a>
+    </div>
+    <div class="navend">
+      <button class="lang" id="lang" type="button">English</button>
+      <a class="btn btn-fill" href="#try" data-start="25"><span lang="ar">ابدأ التحدي</span><span lang="en">Take the challenge</span></a>
+    </div>
+  </nav>
+</div>
+
+<main>
+<section class="hero" id="top">
+  <canvas id="rings" aria-hidden="true"></canvas>
+  <div class="hero-in wrap">
+    <h1 class="h1 wide">
+      <span class="l1"><span lang="ar">خليك مركّز</span><span lang="en">Stay focused</span></span>
+      <span class="l2"><span lang="ar">ولا سباركي بيصير له <span class="grad">كابووم!</span></span><span lang="en">or Sparky goes <span class="grad">kaboom!</span></span></span>
+    </h1>
+    <p class="lede" lang="ar">كابووم تطبيق مع سباركي اللي يراقب تركيزك، مع روبوت صغير على مكتبك أو بكاميرا جوالك. وإذا سرحت كثير يبدأ العد التنازلي.</p>
+    <p class="lede" lang="en">Kaboom pairs a mobile app with Sparky, who watches your focus with a small robot on your desk or with your phone's camera. Drift away too long and the countdown starts.</p>
+    <div class="ctas">
+      <a class="btn btn-glow" href="#try"><span lang="ar">جرّب سباركي</span><span lang="en">Try Sparky</span></a>
+      <a class="btn btn-quiet" href="#how"><span lang="ar">شوف كيف يشتغل</span><span lang="en">See how it works</span></a>
+    </div>
+    <div class="sparky" id="heroFace" role="button" tabindex="0" aria-label="Sparky"></div>
+  </div>
+</section>
+
+<section class="sec wrap" id="why">
+  <div class="sec-head">
+    <h2 class="h2 wide"><span lang="ar">وقتك يروح بين الإشعارات<span class="grad line2">سباركي يرجّعه لك</span></span><span lang="en">Your time leaks into notifications<span class="grad line2">Sparky wins it back</span></span></h2>
+  </div>
+  <div class="vs">
+    <div class="vc glass bad spot">
+      <span class="era"><span lang="ar">قبل سباركي</span><span lang="en">Before Sparky</span></span>
+      <div class="scene"><div data-face="distracted" data-live></div>
+        <span class="float" style="top:0;inset-inline-start:0" data-icon="bell"></span>
+        <span class="float" style="top:8%;inset-inline-end:2%;animation-delay:-1.3s" data-icon="chat"></span>
+        <span class="float" style="bottom:4%;inset-inline-end:-4%;animation-delay:-2.6s" data-icon="play"></span></div>
+      <h3><i>✕</i><span lang="ar">مشتّت وتقلّب بالجوال</span><span lang="en">Distracted and scrolling</span></h3>
+      <p lang="ar">إشعار ورا إشعار، والمهمة اللي بديت فيها ما خلصت. وآخر اليوم تحس إنه راح عليك.</p>
+      <p lang="en">One notification after another, and the task you started never gets done. By evening the day feels gone.</p>
+    </div>
+    <div class="vc glass good spot">
+      <span class="era"><span lang="ar">مع سباركي</span><span lang="en">With Sparky</span></span>
+      <div class="scene"><div data-face="ready" data-live></div>
+        <span class="float" style="top:0;inset-inline-start:2%" data-icon="book"></span>
+        <span class="float" style="top:6%;inset-inline-end:0;animation-delay:-1.5s" data-icon="music"></span>
+        <span class="float" style="bottom:4%;inset-inline-start:-4%;animation-delay:-2.8s" data-icon="check"></span></div>
+      <h3><i>✓</i><span lang="ar">مركّز ومسيطر</span><span lang="en">Focused and in control</span></h3>
+      <p lang="ar">جوالك على المكتب، وعينك على الشغل، وسباركي يبتسم لك. وكل دقيقة تركيز تجيب لك عملة.</p>
+      <p lang="en">Phone on the desk, eyes on the work, and Sparky smiling back. Every focused minute earns you a coin.</p>
+      <div class="modes"><span><i data-icon="robot"></i><span lang="ar">مع الروبوت</span><span lang="en">With the robot</span></span><span><i data-icon="phone"></i><span lang="ar">بكاميرا الجوال</span><span lang="en">Phone camera</span></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="idea">
+  <div class="sec-head">
+    <span class="chip glass small"><span lang="ar">الفكرة</span><span lang="en">The idea</span></span>
+    <h2 class="h2 wide"><span class="grad"><span lang="ar">مبني للتركيز</span><span lang="en">Built for focus</span></span><br><span lang="ar">مصمم للدراما</span><span lang="en">Designed for drama</span></h2>
+  </div>
+  <div class="idea">
+    <div class="idea-text">
+      <h3><span lang="ar">سباركي ما يتكلم</span><span lang="en">Sparky never speaks</span></h3>
+      <p lang="ar">سباركي يتابع تركيزك وأنت تشتغل. وجهه يقول كل شي: يبتسم لما تركز، ويتوتر لما تسرح، وعند الصفر… كابووم.</p>
+      <p lang="en">Sparky follows your focus while you work. His face says it all: he smiles when you focus, gets nervous when you drift, and at zero… kaboom.</p>
+      <p lang="ar">والخيار لك: استخدم كابووم مع روبوت سباركي على مكتبك، أو بكاميرا جوالك.</p>
+      <p lang="en">Your choice: use Kaboom with the Sparky robot on your desk, or with your phone's camera.</p>
+    </div>
+    <div class="constel" id="constel">
+      <svg class="lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="ln" x1="0" x2="1"><stop offset="0" stop-color="#4F6BFF" stop-opacity=".7"/><stop offset="1" stop-color="#8B5CF6" stop-opacity=".7"/></linearGradient></defs>
+        <path d="M22 18 L62 34 L30 66 L74 82 M62 34 L74 82" stroke="url(#ln)" stroke-width=".35" fill="none" stroke-dasharray="1.2 1.2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="node" style="inset-inline-start:2%;top:4%;animation-delay:0s"><div class="card glass spot tilt"><div class="ic" data-icon="eye"></div><b><span lang="ar">ركّز</span><span lang="en">Focus</span></b><span><span lang="ar">عينك على الشغل</span><span lang="en">Eyes on the work</span></span></div></div>
+      <div class="node" style="inset-inline-start:48%;top:20%;animation-delay:-1.5s"><div class="card glass spot tilt"><div class="ic" data-icon="robot"></div><b><span lang="ar">احمِ سباركي</span><span lang="en">Protect Sparky</span></b><span><span lang="ar">لا تخليه ينفجر</span><span lang="en">Don't let him blow</span></span></div></div>
+      <div class="node" style="inset-inline-start:10%;top:54%;animation-delay:-3s"><div class="card glass spot tilt"><div class="ic" data-icon="coin"></div><b><span lang="ar">اكسب</span><span lang="en">Earn</span></b><span><span lang="ar">عملة كل دقيقة</span><span lang="en">A coin a minute</span></span></div></div>
+      <div class="node" style="inset-inline-start:56%;top:70%;animation-delay:-4.5s"><div class="card glass spot tilt"><div class="ic" data-icon="shop"></div><b><span lang="ar">كشّخه</span><span lang="en">Dress him up</span></b><span><span lang="ar">قبعات وإكسسوارات</span><span lang="en">Hats and accessories</span></span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="how">
+  <div class="sec-head">
+    <span class="chip glass small"><span lang="ar">كيف يشتغل</span><span lang="en">How it works</span></span>
+    <h2 class="h2 wide"><span lang="ar">من «جاهز» لين <span class="grad">«كابووم»</span></span><span lang="en">From "ready" to <span class="grad">"kaboom"</span></span></h2>
+    <p class="sub" lang="ar">مؤقت تركيز بلمسة دراما: كل دقيقة تركيز تحمي سباركي. تسرح كثير؟ يبدأ العد.</p>
+    <p class="sub" lang="en">A focus timer with a dramatic twist: every focused minute keeps Sparky safe. Drift too long and the countdown starts.</p>
+  </div>
+  <div class="tl" id="tl">
+    <span class="fill" aria-hidden="true"></span>
+    <div class="stage-step">
+      <div class="medal"><div data-face="ready" data-live></div></div>
+      <span class="mono">25:00</span>
+      <h3><span lang="ar">ابدأ جلسة</span><span lang="en">Start a session</span></h3>
+      <p lang="ar">اختر المدة واضغط ابدأ. سباركي يصحى ويبدأ يتابعك، سواء مع الروبوت على مكتبك أو بكاميرا جوالك.</p>
+      <p lang="en">Pick a length and press Start. Sparky wakes up and starts watching, with the robot on your desk or with your phone's camera.</p>
+    </div>
+    <div class="stage-step boomy">
+      <div class="medal"><div data-face="kaboom" data-live></div></div>
+      <span class="mono">00:03 → 00:00</span>
+      <h3><span lang="ar">التشتت يفجّره</span><span lang="en">Distraction blows him up</span></h3>
+      <p lang="ar">تطالع بعيد كثير؟ يتوتر وجهه ويبدأ العد ٣، ٢، ١. ما رجعت؟ كابووم، وتضيع الجلسة.</p>
+      <p lang="en">Look away too long and he gets nervous. 3, 2, 1. Not back? Kaboom, and the session is lost.</p>
+    </div>
+    <div class="stage-step">
+      <div class="medal"><div data-face="happy" data-live></div></div>
+      <span class="mono">+10</span>
+      <h3><span lang="ar">ركّز وخذ عملاتك</span><span lang="en">Stay focused, collect coins</span></h3>
+      <p lang="ar">خلّص الجلسة وسباركي بخير، والعملات تنضاف لرصيدك وتنصرف في المتجر.</p>
+      <p lang="en">Finish the session, Sparky survives, and the coins land in your balance for the shop.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="try">
+  <div class="sec-head">
+    <span class="chip glass small"><span lang="ar">جرّبه الحين</span><span lang="en">Try it now</span></span>
+    <h2 class="h2 wide"><span lang="ar">تقدر تخليه <span class="grad">سالم؟</span></span><span lang="en">Can you keep him <span class="grad">alive?</span></span></h2>
+    <p class="sub" lang="ar">جلسة تجريبية حقيقية. اضغط «اسرح شوي» وشوف وش يصير.</p>
+    <p class="sub" lang="en">A real demo session. Press Drift away and see what happens.</p>
+  </div>
+  <div class="demo glass" id="demo">
+    <div class="dl">
+      <div class="dface" id="demoFace"></div>
+      <span class="pill" id="pill"><i></i><span id="pillText">جاهز</span></span>
+      <p class="say" id="say" aria-live="polite">جاهز تركّز؟</p>
+    </div>
+    <div class="dr">
+      <div class="seg" role="group" aria-label="Session length" id="seg">
+        <button type="button" data-len="5" aria-pressed="true">5 <span lang="ar">د</span><span lang="en">min</span></button>
+        <button type="button" data-len="10" aria-pressed="false">10 <span lang="ar">د</span><span lang="en">min</span></button>
+        <button type="button" data-len="25" aria-pressed="false">25 <span lang="ar">د</span><span lang="en">min</span></button>
+        <button type="button" data-len="45" aria-pressed="false">45 <span lang="ar">د</span><span lang="en">min</span></button>
+        <button type="button" data-len="60" aria-pressed="false">60 <span lang="ar">د</span><span lang="en">min</span></button>
+      </div>
+      <div class="bigring"><svg viewBox="0 0 200 200" aria-hidden="true"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F6BFF" id="rg0"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient><filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="100" cy="100" r="86" fill="none" stroke="#15163F" stroke-width="14"/><circle id="arc" cx="100" cy="100" r="86" fill="none" stroke="url(#rg)" stroke-width="14" stroke-linecap="round" transform="rotate(-90 100 100)" filter="url(#glow)"/></svg>
+        <div class="t"><b id="clock">05:00</b><span><span lang="ar">متبقي</span><span lang="en">left</span></span></div></div>
+      <div class="dbtns">
+        <button class="btn btn-glow" id="drift" type="button">اسرح شوي</button>
+        <button class="btn btn-quiet" id="restart" type="button"><span lang="ar">ابدأ من جديد</span><span lang="en">Restart</span></button>
+      </div>
+      <div class="wallet"><span lang="ar">عملاتك</span><span lang="en">Your coins</span><b><i></i><span class="coins">120</span></b></div>
+      <p class="note"><span lang="ar">في التجربة: عملة كل ٥ ثواني تركيز، و١٠ لو خلّصت الجلسة. الكابووم ما ياخذ من عملاتك.</span><span lang="en">Demo rate: a coin every 5 focused seconds, 10 more for finishing. A kaboom never takes your coins.</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="sec wrap" id="collection">
+  <div class="sec-head">
+    <h2 class="h2 wide"><span lang="ar">كل جلسة <span class="grad">تنضاف لسجلك</span></span><span lang="en">Every session <span class="grad">joins your record</span></span></h2>
+    <p class="sub" lang="ar">مع الوقت، جلساتك تصير سجل تشوفه: كل سباركي سالم يمثل دقائق اخترت فيها التركيز بدل التشتت.</p>
+    <p class="sub" lang="en">Over time your sessions become a record you can see: every surviving Sparky is time you chose focus over distraction.</p>
+  </div>
+  <div class="wall glass" id="wall">
+    <div class="wall-top">
+      <div class="wall-stats" id="wallStats"></div>
+      <span class="tag"><span lang="ar">أسبوع تجريبي للتوضيح</span><span lang="en">Example week</span></span>
+    </div>
+    <div class="week" id="week"></div>
+    <p class="wall-info" id="wallInfo" aria-live="polite"></p>
+  </div>
+</section>
+
+
+<section class="sec wrap" id="moods">
+  <div class="sec-head">
+    <span class="chip glass small"><span lang="ar">تعابير سباركي</span><span lang="en">Sparky's faces</span></span>
+    <h2 class="h2 wide"><span lang="ar">ما يتكلم، <span class="grad">وجهه يقول كل شي</span></span><span lang="en">He never speaks, <span class="grad">His face does</span></span></h2>
+  </div>
+  <div class="moods">
+    <div class="mstage glass spot"><div class="f" id="moodFace"></div><b id="moodName"></b><span id="moodNote"></span></div>
+    <div class="mlist" id="moodList"></div>
+  </div>
+</section>
+
+<section class="sec wrap" id="shop">
+  <div class="sec-head">
+    <span class="chip glass small"><span lang="ar">المتجر</span><span lang="en">The shop</span></span>
+    <h2 class="h2 wide"><span lang="ar">التركيز يجيب عملات،<span class="grad line2">والعملات تكشّخه</span></span><span lang="en">Focus earns coins,<span class="grad line2">Coins dress Sparky</span></span></h2>
+    <p class="sub" lang="ar">العملات اللي جمعتها في التجربة فوق تنصرف هنا. اختر قطعة وجرّبها عليه.</p>
+    <p class="sub" lang="en">Coins you earned in the demo above work here. Pick an item to try it on him.</p>
+  </div>
+  <div class="shopw">
+    <div class="try glass spot">
+      <div class="wallet"><span lang="ar">عملاتك</span><span lang="en">Your coins</span><b><i></i><span class="coins">120</span></b></div>
+      <div class="f"><div id="tryFace"></div></div>
+      <span class="cat"><span id="tryCat"></span><span class="rare" id="tryRare" hidden>RARE</span></span>
+      <span class="price"><i></i><span id="tryPrice"></span></span>
+      <button class="btn btn-fill" id="buy" type="button"></button>
+    </div>
+    <div class="items" id="items"></div>
+  </div>
+</section>
+
+<section class="sec wrap" id="team">
+  <div class="sec-head">
+    <span class="chip glass small"><span lang="ar">الفريق</span><span lang="en">The team</span></span>
+    <h2 class="h2 wide"><span lang="ar">الفريق <span class="grad">ورا سباركي</span></span><span lang="en">The team <span class="grad">behind Sparky</span></span></h2>
+  </div>
+  <div class="team">
+    <div class="member glass spot"><div class="av" data-avatar="shahd" role="img" aria-label="Shahd Faisal"></div><b dir="rtl">شهد فيصل</b><span class="en-name">Shahd Faisal</span></div>
+    <div class="member glass spot"><div class="av" data-avatar="lama" role="img" aria-label="Lama Almazroa"></div><b dir="rtl">لاما المزروع</b><span class="en-name">Lama Almazroa</span></div>
+    <div class="member glass spot"><div class="av" data-avatar="noura" role="img" aria-label="Noura Alotaibi"></div><b dir="rtl">نوره العتيبي</b><span class="en-name">Noura Alotaibi</span></div>
+    <div class="member glass spot"><div class="av" data-avatar="ghaid" role="img" aria-label="Ghaid Alhosaine"></div><b dir="rtl">غيد الحسيني</b><span class="en-name">Ghaid Alhosaine</span></div>
+  </div>
+</section>
+
+<section class="sec wrap" id="faq">
+  <div class="sec-head">
+    <span class="chip glass small"><span lang="ar">الأسئلة الشائعة</span><span lang="en">FAQ</span></span>
+    <h2 class="h2 wide"><span lang="ar">كل اللي تبي تعرفه</span><span lang="en">Everything you want to know</span></h2>
+  </div>
+  <div class="faq">
+    <details class="glass"><summary><span lang="ar">وش هو كابووم؟</span><span lang="en">What is Kaboom?</span></summary><p lang="ar">تطبيق جوال مع سباركي اللي يراقب تركيزك، مع روبوت صغير على مكتبك أو بكاميرا جوالك. إذا سرحت كثير يبدأ العد التنازلي، وعند الصفر كابووم.</p><p lang="en">A mobile app paired with Sparky, who watches your focus with a small robot on your desk or with your phone's camera. Drift too long and the countdown starts. At zero, kaboom.</p></details>
+    <details class="glass"><summary><span lang="ar">كيف يعرف سباركي إني سرحت؟</span><span lang="en">How does Sparky know I drifted?</span></summary><p lang="ar">يتابعك سواء كنت مع الروبوت أو بكاميرا جوالك. إذا ما شاف وجهك أو طوّلت وأنت تطالع بعيد، يتغير وجهه ويبدأ العد.</p><p lang="en">He watches you whether you use the robot or your phone's camera. If he can't see your face, or you look away too long, his face changes and the countdown starts.</p></details>
+    <details class="glass"><summary><span lang="ar">لازم يكون عندي الروبوت؟</span><span lang="en">Do I need the robot?</span></summary><p lang="ar">لا. تقدر تستخدم كابووم مع روبوت سباركي على مكتبك، أو بكاميرا جوالك.</p><p lang="en">No. You can use Kaboom with the Sparky robot on your desk, or with your phone's camera.</p></details>
+    <details class="glass"><summary><span lang="ar">لو صار كابووم، أخسر عملاتي؟</span><span lang="en">Do I lose my coins in a kaboom?</span></summary><p lang="ar">لا. الكابووم يضيّع الجلسة الحالية بس، ومدخراتك تبقى زي ما هي.</p><p lang="en">No. A kaboom only costs the current session. Your savings stay as they are.</p></details>
+    <details class="glass"><summary><span lang="ar">كيف أجمع العملات؟</span><span lang="en">How do I earn coins?</span></summary><p lang="ar">عملة لكل دقيقة تركيز، و١٠ عملات لما تخلّص الجلسة، و×1.5 لو ركزت ٣ أيام ورا بعض.</p><p lang="en">One coin per focused minute, 10 for finishing a session, and ×1.5 on a 3-day streak.</p></details>
+    <details class="glass"><summary><span lang="ar">وش أقدر أشتري بالعملات؟</span><span lang="en">What can I buy with coins?</span></summary><p lang="ar">قبعات وإكسسوارات وأشياء كثيرة تكشّخ فيها سباركي. التعابير الجديدة جاية في إصدار لاحق.</p><p lang="en">Hats, accessories and plenty more to dress Sparky up. New expressions come in a later version.</p></details>
+    <details class="glass"><summary><span lang="ar">متى ينزل التطبيق؟</span><span lang="en">When is the app out?</span></summary><p lang="ar">كابووم قيد التطوير حاليًا، وقريبًا.</p><p lang="en">Kaboom is in development now. Coming soon.</p></details>
+  </div>
+</section>
+
+<section class="sec wrap">
+  <div class="finale glass">
+    <canvas id="rings2" aria-hidden="true"></canvas>
+    <span class="chip glass small mono">25:00</span>
+    <h2 class="h2 wide"><span lang="ar">تحدي الـ٢٥ دقيقة</span><span lang="en">The 25-minute challenge</span></h2>
+    <p class="sub" style="font-size:20px;color:var(--mist)"><span lang="ar">تقدر تخلي سباركي سالم؟</span><span lang="en">Can you keep Sparky alive?</span></p>
+    <a class="btn btn-fill" href="#try" data-start="25"><span lang="ar">ابدأ التحدي</span><span lang="en">Take the challenge</span></a>
+    <p class="hint"><span lang="ar">كابووم قيد التطوير، والتطبيق قريبًا.</span><span lang="en">Kaboom is in development. The app is coming soon.</span></p>
+    <p class="follow"><span lang="ar">تابع سباركي</span><span lang="en">Follow Sparky</span></p>
+    <div class="socials"><a class="soc" href="https://tiktok.com/@sparkykaboom" target="_blank" rel="noopener" aria-label="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M14 3c.5 2.6 2.4 4.4 5 4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>TikTok</span></a><a class="soc" href="https://x.com/sparkykaboom" target="_blank" rel="noopener" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l16 16M20 4L4 20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>X</span></a><a class="soc" href="https://www.linkedin.com/company/kab00m/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V16M8 7.6v.1M12 16v-5.5M12 13c0-1.6 1-2.6 2.3-2.6S16.5 11.2 16.5 13v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>LinkedIn</span></a></div>
+  </div>
+</section>
+</main>
+
+<footer class="wrap">
+  <div class="foot glass">
+    <a class="brand" href="#top"><span class="mk" data-face="ready"></span><b><span lang="ar">كابووم</span><span lang="en">kaboom</span></b></a>
+    <span dir="rtl">خليك مركز ولا سباركي بيصير له كابووم!</span>
+    <div class="socials"><a class="soc" href="https://tiktok.com/@sparkykaboom" target="_blank" rel="noopener" aria-label="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M14 3c.5 2.6 2.4 4.4 5 4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>TikTok</span></a><a class="soc" href="https://x.com/sparkykaboom" target="_blank" rel="noopener" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l16 16M20 4L4 20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>X</span></a><a class="soc" href="https://www.linkedin.com/company/kab00m/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V16M8 7.6v.1M12 16v-5.5M12 13c0-1.6 1-2.6 2.3-2.6S16.5 11.2 16.5 13v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>LinkedIn</span></a></div>
+  </div>
+</footer>
+</div>
+
+<script>
+(function(){
+const RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const C={deep:'#191A52',screen:'#0E0F2E',volt:'#4F6BFF',violet:'#8B5CF6',haze:'#9CA3D4',cyan:'#38BDF8',gold:'#F5C542',paper:'#F4F4FB'};
+const page=document.getElementById('page'),$=id=>document.getElementById(id);
+const AR=()=>page.dataset.lang==='ar',T=(ar,en)=>AR()?ar:en;
+
+/* ---------- Sparky (brand-book geometry; eyes and mouth in their own groups so they can follow the cursor) ---------- */
+function burst(fx){const p=[];for(let i=0;i<36;i++){const r=i%2?118:162,a=i/36*Math.PI*2;p.push([120+Math.cos(a)*r*1.15,85+Math.sin(a)*r*.85]);}
+ const s=p.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' '),inn=p.map(q=>(120+(q[0]-120)*.72).toFixed(1)+','+(85+(q[1]-85)*.72).toFixed(1)).join(' ');
+ return `<g style="transform-origin:120px 85px;animation:kbBurst .6s ease-out both"><polygon points="${s}" fill="${fx?C.gold:C.violet}"/><polygon points="${inn}" fill="${fx?C.cyan:'#A98BFF'}"/></g>`;}
+const ACC={
+ cap:['','<path d="M50 12 Q56 -48 130 -48 Q196 -48 202 12 Z" fill="#8B5CF6"/><path d="M186 8 Q228 2 254 16" stroke="#8B5CF6" stroke-width="12" stroke-linecap="round" fill="none"/><circle cx="128" cy="-48" r="8" fill="#F5C542"/>'],
+ crown:['','<path d="M64 8 L70 -44 L96 -16 L120 -54 L144 -16 L170 -44 L176 8 Z" fill="#F5C542" stroke="#D9A21E" stroke-width="4" stroke-linejoin="round"/><circle cx="120" cy="-12" r="7" fill="#8B5CF6"/>'],
+ phones:['<path d="M-6 86 Q-6 -44 120 -44 Q246 -44 246 86" fill="none" stroke="#4F6BFF" stroke-width="12" stroke-linecap="round"/>','<rect x="-24" y="50" width="32" height="70" rx="13" fill="#8B5CF6"/><rect x="232" y="50" width="32" height="70" rx="13" fill="#8B5CF6"/>'],
+ antenna:['<path d="M120 4 V-34" stroke="#9CA3D4" stroke-width="6" stroke-linecap="round"/>','<circle cx="120" cy="-44" r="12" fill="#38BDF8"/>']};
+function face(e,o){o=o||{};const an=o.animate!==false&&!RM,acc=ACC[o.hat]||['',''];
+ const hot=e==='kaboom'||/^c\d/.test(e),volt=o.eye||C.volt,cyan=o.mouth||C.cyan,vio=C.violet;
+ const E=`stroke="${hot?vio:volt}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"`,M=`stroke="${cyan}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+ const bl=an?' style="transform-box:fill-box;transform-origin:center;animation:kbBlink 5s infinite"':'';
+ let ey='',mo='',under='';
+ if(e==='ready'){ey=`<g${bl}><circle cx="80" cy="76" r="16" ${E}/><circle cx="160" cy="76" r="16" ${E}/></g>`;mo=`<path d="M100 106 Q120 124 140 106" ${M}/>`;}
+ else if(e==='happy'){ey=`<path d="M62 86 A18 18 0 0 1 98 86 M142 86 A18 18 0 0 1 178 86" ${E}/>`;mo=`<path d="M96 106 Q120 130 144 106" ${M}/>`;}
+ else if(e==='focused'){ey=`<g${bl}><rect x="62" y="70" width="36" height="13" rx="6.5" fill="${volt}"/><rect x="142" y="70" width="36" height="13" rx="6.5" fill="${volt}"/></g>`;mo=`<path d="M106 112 H134" ${M}/>`;}
+ else if(e==='away'){ey=`<path d="M64 82 H96 M144 82 H176" ${E}/>`;mo=`<circle cx="120" cy="114" r="6" ${M}/>`;}
+ else if(e==='distracted'){ey=`<path d="M68 62 L94 77 L68 92 M172 62 L146 77 L172 92" ${E}/>`;mo=`<path d="M102 118 Q120 102 138 118" ${M}/>`;}
+ else if(e==='kaboom'){ey=`<path d="M66 62 L94 90 M94 62 L66 90 M146 62 L174 90 M174 62 L146 90" ${E}/>`;mo=`<path d="M90 118 l10 -9 l10 9 l10 -9 l10 9 l10 -9 l10 9" ${M}/>`;if(!o.tight)under=burst(o.fx);}
+ else ey=`<text x="120" y="118" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="700" font-size="96" fill="${vio}">${e.slice(1)}</text>`;
+ const hA=!an?'':e==='kaboom'?'animation:kbShake .35s linear 3':hot?'animation:kbPulse .9s ease-in-out infinite':'animation:kbFloat 4s ease-in-out infinite';
+ const vb=o.shop?'-32 -66 304 242':o.tight?'-3 -3 246 176':'-60 -50 360 270';
+ return `<svg viewBox="${vb}" width="100%" style="display:block;overflow:visible" aria-hidden="true">${under}<g style="${hA}">${acc[0]}<rect width="240" height="170" rx="34" fill="${C.deep}"/><rect x="16" y="16" width="208" height="138" rx="24" fill="${C.screen}" stroke="${hot?vio:volt}" stroke-width="6"/><g class="eyes">${ey}</g><g class="mouth">${mo}</g>${acc[1]}</g></svg>`;}
+const ICONS={timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2h5"/>',eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',coin:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/>',shop:'<path d="M5 8h14l-1.2 12H6.2L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',robot:'<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M8 12h.01M16 12h.01M10 15.5q2 1.5 4 0M12 6V3"/>',bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2zM10 21h4"/>',chat:'<path d="M4 5h16v11H9l-5 4z"/>',play:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>',book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/>',music:'<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',check:'<path d="M4 12l5 5L20 6"/>',phone:'<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',spark:'<path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2 19 19M5 19l2.8-2.8M16.2 7.8 19 5"/>'};
+const icon=k=>`<svg viewBox="0 0 24 24" width="100%" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-hidden="true">${ICONS[k]}</svg>`;
+document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
+
+/* ---------- shared state: coins and what Sparky is wearing ---------- */
+const SHOP=[{id:'antenna',cat:'hats',ar:'هوائي',en:'Antenna',price:40,hat:'antenna'},{id:'phones',cat:'hats',ar:'سماعات',en:'Headphones',price:90,hat:'phones'},{id:'crown',cat:'hats',ar:'تاج ذهبي',en:'Gold crown',price:120,hat:'crown',rare:true}];
+const CAT={hats:['قبعة','Hat'],screens:['شاشة','Screen theme'],fx:['مؤثر الانفجار','Kaboom effect']};
+const W={coins:120,owned:[],eq:{hats:null,screens:null,fx:null},sel:'antenna'};
+const byId=id=>SHOP.find(x=>x.id===id)||{};
+function look(preview){const hat=preview&&preview.cat==='hats'?preview.hat:byId(W.eq.hats).hat,sc=preview&&preview.cat==='screens'?preview:byId(W.eq.screens);return {hat,eye:sc.eye,mouth:sc.mouth,fx:!!W.eq.fx||!!(preview&&preview.fx)};}
+function setCoins(n){W.coins=n;document.querySelectorAll('.coins').forEach(el=>{el.textContent=n;el.parentElement.classList.remove('pop');void el.offsetWidth;el.parentElement.classList.add('pop');});}
+function paintMarks(){document.querySelectorAll('[data-face]').forEach(el=>{const f=el.dataset.face,hat=el.dataset.hat;
+ el.innerHTML=face(f,{tight:f!=='kaboom'&&!hat,shop:!!hat,hat,animate:el.hasAttribute('data-live')});});}
+paintMarks();
+
+/* ---------- glowing glass rings (canvas) ---------- */
+function Rings(cv,cfg,nStars){
+ const ctx=cv.getContext('2d');let w=0,h=0,dpr=1,px=0,py=0,tx=0,ty=0,on=true,raf=0;
+ const stars=Array.from({length:nStars||0},()=>({x:Math.random(),y:Math.random(),s:Math.random()*1.4+.5,p:Math.random()*6.28,v:.6+Math.random()}));
+ function sparkle(t){ctx.globalCompositeOperation='lighter';stars.forEach(s=>{const a=Math.max(0,Math.sin(t*.0015*s.v+s.p));if(a<.05)return;const x=s.x*w+px*8,y=s.y*h+py*6,r=s.s*(1+a);
+  ctx.globalAlpha=a*.9;ctx.fillStyle='#E4E8FF';ctx.shadowColor='rgba(160,175,255,.9)';ctx.shadowBlur=10;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();
+  if(s.s>1.4){ctx.shadowBlur=0;ctx.globalAlpha=a*.5;ctx.fillRect(x-r*5,y-.5,r*10,1);ctx.fillRect(x-.5,y-r*5,1,r*10);}});ctx.shadowBlur=0;}
+ function size(){const r=cv.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,1.5);w=r.width;h=r.height;cv.width=w*dpr;cv.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);if(RM)draw(0);}
+ function tube(R,ry,a0,a1,lw,front,g){
+  ctx.beginPath();ctx.ellipse(0,0,R,ry,0,a0,a1);ctx.strokeStyle=g;
+  ctx.globalAlpha=front?.16:.07;ctx.lineWidth=lw;ctx.shadowBlur=0;ctx.stroke();
+  ctx.globalAlpha=front?.55:.2;ctx.lineWidth=lw*.28;ctx.shadowColor='rgba(139,92,246,.9)';ctx.shadowBlur=front?28:10;ctx.stroke();
+  ctx.shadowBlur=0;ctx.strokeStyle='rgba(235,238,255,1)';ctx.lineWidth=1.2;
+  ctx.globalAlpha=front?.55:.16;ctx.beginPath();ctx.ellipse(0,0,R+lw*.48,ry+lw*.48,0,a0,a1);ctx.stroke();
+  ctx.globalAlpha=front?.3:.1;ctx.beginPath();ctx.ellipse(0,0,Math.max(1,R-lw*.48),Math.max(1,ry-lw*.48),0,a0,a1);ctx.stroke();}
+ function draw(t){ctx.clearRect(0,0,w,h);ctx.globalCompositeOperation='lighter';const S=Math.min(Math.max(w,h),1500);
+  px+=(tx-px)*.05;py+=(ty-py)*.05;
+  cfg.forEach(r=>{const cx=w*r.x+px*r.d*40,cy=h*r.y+py*r.d*30,R=S*r.r,
+   tilt=r.tilt+Math.sin(t*.0003*r.sp+r.ph)*.18+py*.25,rot=r.rot+Math.sin(t*.0002*r.sp+r.ph)*.25+px*.2,
+   ry=Math.max(R*.06,Math.abs(R*Math.cos(tilt))),lw=R*r.w;
+   ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);
+   const g=ctx.createLinearGradient(-R,-ry,R,ry);g.addColorStop(0,'#4F6BFF');g.addColorStop(.55,'#8B5CF6');g.addColorStop(1,'#38BDF8');
+   tube(R,ry,Math.PI,Math.PI*2,lw,false,g);tube(R,ry,0,Math.PI,lw,true,g);ctx.restore();});
+  sparkle(t);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';}
+ function loop(t){draw(t);raf=on?requestAnimationFrame(loop):0;}
+ size();new ResizeObserver(size).observe(cv);
+ if(RM){draw(0);return;}
+ window.addEventListener('pointermove',e=>{tx=e.clientX/innerWidth*2-1;ty=e.clientY/innerHeight*2-1;},{passive:true});
+ new IntersectionObserver(es=>{on=es[0].isIntersecting;if(on&&!raf)raf=requestAnimationFrame(loop);}).observe(cv);
+}
+Rings($('rings'),[
+ {x:.5,y:.80,r:.20,tilt:1.25,rot:-.18,w:.09,sp:1,ph:0,d:1},
+ {x:.5,y:.80,r:.29,tilt:1.05,rot:.22,w:.07,sp:.8,ph:2,d:1.4},
+ {x:.06,y:.30,r:.26,tilt:.7,rot:.9,w:.11,sp:.6,ph:1,d:2},
+ {x:.96,y:.42,r:.30,tilt:.9,rot:-.8,w:.10,sp:.7,ph:3,d:2.2},
+ {x:.85,y:1.05,r:.22,tilt:1.1,rot:.4,w:.12,sp:.9,ph:4,d:1.6}],46);
+Rings($('rings2'),[{x:.1,y:.5,r:.25,tilt:.8,rot:.7,w:.12,sp:.7,ph:0,d:1.5},{x:.92,y:.45,r:.28,tilt:1,rot:-.6,w:.1,sp:.8,ph:2,d:1.5}],24);
+
+/* ---------- spotlight borders + tilt ---------- */
+document.addEventListener('pointermove',e=>{const el=e.target.closest&&e.target.closest('.spot');if(!el)return;const r=el.getBoundingClientRect();el.style.setProperty('--mx',(e.clientX-r.left)+'px');el.style.setProperty('--my',(e.clientY-r.top)+'px');},{passive:true});
+if(!RM)document.querySelectorAll('.tilt').forEach(el=>{el.addEventListener('pointermove',e=>{const r=el.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;el.style.transform=`perspective(600px) rotateY(${x*14}deg) rotateX(${-y*14}deg)`;});el.addEventListener('pointerleave',()=>el.style.transform='');});
+
+/* ---------- hero Sparky: eyes follow the cursor ---------- */
+const hero=$('heroFace');let heroE='ready',heroT=0;
+function paintHero(){hero.innerHTML=face(heroE,look());}
+function setHero(e){if(e!==heroE){heroE=e;paintHero();}}
+paintHero();
+window.addEventListener('pointermove',e=>{if(heroE==='away')setHero('ready');const r=hero.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height*.45;
+ const dx=Math.max(-1,Math.min(1,(e.clientX-cx)/(innerWidth/2))),dy=Math.max(-1,Math.min(1,(e.clientY-cy)/(innerHeight/2)));
+ const ey=hero.querySelector('.eyes'),mo=hero.querySelector('.mouth');if(ey)ey.setAttribute('transform',`translate(${(dx*16).toFixed(1)} ${(dy*11).toFixed(1)})`);if(mo)mo.setAttribute('transform',`translate(${(dx*8).toFixed(1)} ${(dy*5).toFixed(1)})`);},{passive:true});
+document.documentElement.addEventListener('pointerleave',()=>setHero('away'));
+function boop(){clearTimeout(heroT);setHero('happy');const b=document.createElement('span');b.className='boop';b.textContent='+1';hero.appendChild(b);setTimeout(()=>b.remove(),1000);heroT=setTimeout(()=>setHero('ready'),1400);}
+hero.addEventListener('click',boop);hero.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();boop();}});
+
+/* ---------- life-cycle timeline: the line fills as you scroll, each stage lights up ---------- */
+const tl=$('tl');
+function tlProgress(){const r=tl.getBoundingClientRect(),p=Math.max(0,Math.min(1,(innerHeight*.62-r.top)/r.height));tl.style.setProperty('--p',p.toFixed(3));}
+window.addEventListener('scroll',tlProgress,{passive:true});window.addEventListener('resize',tlProgress);tlProgress();
+document.querySelectorAll('.stage-step').forEach(el=>new IntersectionObserver(es=>es.forEach(e=>e.target.classList.toggle('lit',e.isIntersecting)),{rootMargin:'-35% 0px -35% 0px'}).observe(el));
+
+/* ---------- session record (example week) ---------- */
+const DAYS=[['الأحد','Sun'],['الاثنين','Mon'],['الثلاثاء','Tue'],['الأربعاء','Wed'],['الخميس','Thu'],['الجمعة','Fri'],['السبت','Sat']];
+const WEEK=[[[25,1],[25,1]],[[45,1],[25,0],[25,1]],[[60,1]],[[25,1],[25,1],[45,0]],[[25,0],[45,1]],[[60,1],[25,1]],[[25,1],[25,1],[25,1]]];
+let wallSel=null;
+function paintWall(){const all=WEEK.flat(),won=all.filter(s=>s[1]),mins=won.reduce((a,s)=>a+s[0],0);
+ $('wallStats').innerHTML=[[all.length,T('جلسة','sessions')],[won.length,T('سباركي سالم','Sparky survived')],[all.length-won.length,T('كابووم','kabooms')],[mins,T('دقيقة تركيز','focused minutes')]].map(x=>`<div><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+ $('week').innerHTML=WEEK.map((d,i)=>`<div class="day"><small>${T(DAYS[i][0],DAYS[i][1])}</small>${d.map((s,j)=>`<button type="button" class="cell${s[1]?'':' lost'}" data-k="${i}-${j}" aria-pressed="${wallSel===i+'-'+j}" style="animation-delay:${(i*3+j)*40}ms" aria-label="${T(DAYS[i][0],DAYS[i][1])}">${face(s[1]?'happy':'kaboom',{tight:true,animate:false})}</button>`).join('')}</div>`).join('');
+ wallInfo();}
+function wallInfo(){if(!wallSel){$('wallInfo').textContent=T('اضغط أي جلسة تشوف تفاصيلها.','Tap any session to see its details.');return;}
+ const [i,j]=wallSel.split('-').map(Number),s=WEEK[i][j];
+ $('wallInfo').textContent=T(`${DAYS[i][0]} · ${s[0]} دقيقة · ${s[1]?'سباركي سالم، +'+(s[0]+10)+' عملة':'كابووم، الجلسة ضاعت'}`,`${DAYS[i][1]} · ${s[0]} min · ${s[1]?'Sparky survived, +'+(s[0]+10)+' coins':'Kaboom, session lost'}`);}
+$('week').addEventListener('click',e=>{const b=e.target.closest('.cell');if(!b)return;wallSel=b.dataset.k;$('week').querySelectorAll('.cell').forEach(c=>c.setAttribute('aria-pressed',c===b));wallInfo();});
+new IntersectionObserver((es,o)=>es.forEach(e=>{if(e.isIntersecting){$('wall').classList.add('in');o.disconnect();}}),{threshold:.3}).observe($('wall'));
+
+/* ---------- team avatars: each member's own Sparky ---------- */
+function avatar(k){
+ const body=(stroke)=>`<rect width="240" height="170" rx="34" fill="#1B1C4E"/><rect x="16" y="16" width="208" height="138" rx="24" fill="#0E0F2E" stroke="${stroke}" stroke-width="6"/>`;
+ const L=(d,c,w)=>`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w||8}" stroke-linecap="round" stroke-linejoin="round"/>`;
+ const star=(cx,cy,R,r)=>{let p=[];for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r:R;p.push((cx+Math.cos(a)*q).toFixed(1)+','+(cy+Math.sin(a)*q).toFixed(1));}return p.join(' ');};
+ let g='';
+ if(k==='shahd'){ // crown, sunglasses, cheeky tongue
+  g=body('#2F55FF')
+   +'<path d="M66 10 V-50 L91 -28 L121 -54 L151 -28 L177 -50 V10 Z" fill="#E8E42A" stroke="#E8E42A" stroke-width="6" stroke-linejoin="round"/>'
+   +'<rect x="36" y="63" width="59" height="34" rx="3" fill="#5A5C70"/><rect x="148" y="63" width="59" height="34" rx="3" fill="#5A5C70"/>'
+   +L('M95 80 H148','#D8DAE8',2.5)
+   +L('M45 72 Q65 104 86 72','#4A63E8',6)+L('M157 72 Q177 104 198 72','#4A63E8',6)
+   +L('M99 99 Q122 124 146 99','#2346FF',8)
+   +'<ellipse cx="132" cy="121" rx="8" ry="10" fill="#F0344A" transform="rotate(-30 132 121)"/>';
+ } else if(k==='lama'){ // hibiscus on the corner, star glasses, wink
+  const petals=[0,72,144,216,288].map(a=>`<circle cx="29" cy="1" r="14" fill="#F5A3B2" transform="rotate(${a} 29 17)"/>`).join('');
+  g=body('#4F6BFF')
+   +`<polygon points="${star(67,80,46,20)}" fill="#40224E" stroke="#F070B0" stroke-width="3.5" stroke-linejoin="round"/><polygon points="${star(176,80,46,20)}" fill="#40224E" stroke="#F070B0" stroke-width="3.5" stroke-linejoin="round"/>`
+   +L('M106 80 Q122 68 138 80','#F070B0',3.5)
+   +L('M46 86 Q66 52 86 86','#7A80FF',8)+L('M189 64 L161 77 L189 91','#7A6BFF',8)
+   +L('M98 94 Q121 128 145 94','#38BDF8',8)
+   +'<ellipse cx="8" cy="44" rx="16" ry="8" fill="#6BBF59" transform="rotate(20 8 44)"/><ellipse cx="48" cy="44" rx="16" ry="8" fill="#6BBF59" transform="rotate(-20 48 44)"/>'
+   +petals+'<circle cx="29" cy="17" r="9" fill="#EE8A9C"/>'
+   +[0,72,144,216,288].map(a=>`<path d="M29 17 L29 6" stroke="#E04A6A" stroke-width="4" stroke-linecap="round" transform="rotate(${a} 29 17)"/>`).join('')
+   +'<path d="M29 17 L17 -4" stroke="#E04A6A" stroke-width="4" stroke-linecap="round"/><rect x="11" y="-12" width="9" height="11" rx="2" fill="#F5C542" transform="rotate(-30 15 -6)"/>';
+ } else if(k==='noura'){ // witch hat on the corner, gold screen, magic wand
+  g=body('#F5C542')
+   +'<circle cx="66" cy="77" r="18" fill="none" stroke="#F5C542" stroke-width="9"/><circle cx="178" cy="77" r="18" fill="none" stroke="#F5C542" stroke-width="9"/>'
+   +L('M96 96 Q121 128 146 96','#8B5CF6',8)
+   +'<polygon points="183,12 222,-72 238,-60 250,22" fill="#45281A"/><ellipse cx="212" cy="18" rx="56" ry="10" fill="#45281A" transform="rotate(14 212 18)"/>'
+   +'<ellipse cx="28" cy="142" rx="20" ry="7" fill="none" stroke="#F5C542" stroke-width="2" transform="rotate(-35 28 142)" opacity=".85"/>'
+   +L('M6 164 L46 124','#2A2A33',6)+L('M6 164 L13 157','#F4F4FB',6)+L('M41 129 L46 124','#F4F4FB',6)
+   +'<path d="M36 104 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" fill="#F5C542"/><path d="M58 100 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#F5C542"/><path d="M50 134 l2 4.5 4.5 2 -4.5 2 -2 4.5 -2 -4.5 -4.5 -2 4.5 -2z" fill="#F5C542"/>';
+ } else if(k==='ghaid'){ // graduation cap, round glasses, coffee
+  g=body('#F06A7E')
+   +'<circle cx="76" cy="79" r="26" fill="none" stroke="#F06A7E" stroke-width="4.5"/><circle cx="158" cy="79" r="26" fill="none" stroke="#F06A7E" stroke-width="4.5"/>'
+   +L('M100 76 Q117 66 134 76','#F06A7E',4.5)
+   +'<circle cx="76" cy="79" r="10" fill="none" stroke="#F06A7E" stroke-width="4.5"/><circle cx="158" cy="79" r="10" fill="none" stroke="#F06A7E" stroke-width="4.5"/>'
+   +L('M62 66 L70 60','#9CA3D4',2.5)+L('M144 66 L152 60','#9CA3D4',2.5)
+   +L('M103 119 Q119 133 136 119','#F5D67A',4.5)
+   +'<path d="M58 -16 L166 -6 L166 26 Q112 34 58 16 Z" fill="#141A22"/><polygon points="13,-35 118,-55 218,-14 111,6" fill="#1F2530"/>'
+   +L('M116 -23 L188 -6 L187 36','#F5B82E',3)+'<circle cx="116" cy="-23" r="6" fill="#F5B82E"/><rect x="179" y="34" width="16" height="20" rx="3" fill="#F5B82E"/>'
+   +L('M224 112 q-4 -5 0 -10 q4 -5 0 -10','#C9CDEB',3)+L('M238 112 q-4 -5 0 -10 q4 -5 0 -10','#C9CDEB',3)
+   +'<path d="M261 134 h6 a11 11 0 0 1 0 22 h-6" fill="none" stroke="#F4EFEA" stroke-width="6"/><rect x="208" y="121" width="53" height="58" rx="9" fill="#F4EFEA"/><ellipse cx="234.5" cy="125" rx="23" ry="5" fill="#5A3A26"/><rect x="208" y="149" width="53" height="8" fill="#F27A86"/>';
+ }
+ return `<svg viewBox="-40 -96 336 310" width="100%" style="display:block;overflow:visible" aria-hidden="true">${g}</svg>`;}
+document.querySelectorAll('[data-avatar]').forEach(el=>el.innerHTML=avatar(el.dataset.avatar));
+
+/* ---------- live demo session ---------- */
+const S={ready:{e:'ready',c:C.volt,ar:'جاهز',en:'Ready',say:['جاهز تركّز؟','Ready to focus?']},
+ focused:{e:'focused',c:C.cyan,ar:'مركّز',en:'Focused',say:['سباركي معتمد عليك.',"Sparky's counting on you."]},
+ distracted:{e:'distracted',c:C.violet,ar:'مشتّت',en:'Distracted',say:['ارجع لشغلك!','Get back to work!']},
+ c3:{e:'c3',c:C.violet,ar:'ارجع خلال',en:'Back in',say:['٣… ٢… ارجع لشغلك!','3… 2… get back to work!'],t:3},
+ c2:{e:'c2',c:C.violet,ar:'ارجع خلال',en:'Back in',say:['٣… ٢… ارجع لشغلك!','3… 2… get back to work!'],t:2},
+ c1:{e:'c1',c:C.violet,ar:'ارجع خلال',en:'Back in',say:['٣… ٢… ارجع لشغلك!','3… 2… get back to work!'],t:1},
+ kaboom:{e:'kaboom',c:C.violet,ar:'كابووم!',en:'Kaboom!',say:['كابووم. سباركي يعيد التشغيل.',"Kaboom. Sparky's rebooting."],t:0},
+ reboot:{e:'away',c:C.haze,ar:'يعيد التشغيل',en:'Rebooting',say:['كابووم. سباركي يعيد التشغيل.',"Kaboom. Sparky's rebooting."]},
+ happy:{e:'happy',c:C.cyan,ar:'رجعنا',en:'Back on track',say:['أحسنت!','Good job!']},
+ done:{e:'happy',c:C.cyan,ar:'أنجزت',en:'Complete',say:['سباركي بخير. +١٠ عملات','Sparky survived. +10 coins']}};
+const HOT=['distracted','c3','c2','c1','kaboom'],BACK=['distracted','c3','c2','c1'];
+const L=2*Math.PI*86,arc=$('arc');arc.setAttribute('stroke-dasharray',L.toFixed(1)+' '+L.toFixed(1));
+let st='ready',total=300,left=300,seq=0,hiddenAt=0,lastFace='',focusTicks=0;
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function paintDemo(force){const s=S[st];if(force||s.e!==lastFace){$('demoFace').innerHTML=face(s.e,look());lastFace=s.e;}}
+function render(){const s=S[st];paintDemo();
+ $('pill').style.color=s.c;$('pillText').textContent=T(s.ar,s.en);$('say').textContent=s.say[AR()?0:1];
+ $('clock').textContent=s.t!==undefined?'00:0'+s.t:fmt(left);$('clock').style.color=HOT.includes(st)?C.violet:'';
+ arc.setAttribute('stroke-dashoffset',(L*(1-(s.t!==undefined?s.t/3:left/total))).toFixed(1));$('rg0').setAttribute('stop-color',HOT.includes(st)?C.violet:C.volt);
+ $('demo').classList.toggle('hot',HOT.includes(st));
+ const d=$('drift');d.disabled=st==='kaboom'||st==='reboot'||st==='done';
+ const back=BACK.includes(st);d.textContent=back?T('رجعت',"I'm back"):T('اسرح شوي','Drift away');d.className='btn '+(back?'btn-fill':'btn-glow');}
+function go(n){const was=st;st=n;render();if(n==="done"&&was!=="done")confetti(document.querySelector(".dl"));}
+function run(steps,then){clearTimeout(seq);let i=0;(function next(){if(i>=steps.length){if(then)then();return;}const [n,ms]=steps[i++];if(n==='reboot')left=total;go(n);seq=setTimeout(next,ms);})();}
+const DOOM=[['c3',1000],['c2',1000],['c1',1000],['kaboom',2400],['reboot',1800]];
+function start(){left=total;focusTicks=0;run([['ready',1300]],()=>go('focused'));}
+function driftAway(){run([['distracted',1800]].concat(DOOM),()=>go('focused'));}
+function comeBack(){run([['happy',2000]],()=>go('focused'));}
+$('drift').addEventListener('click',()=>{if(BACK.includes(st))comeBack();else if(!['kaboom','reboot','done'].includes(st))driftAway();});
+$('restart').addEventListener('click',start);
+$('seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));total=+b.dataset.len*60;start();});
+setInterval(()=>{if(document.hidden)return;if(['focused','happy','distracted'].includes(st)&&left>0){left--;
+ if(st!=='distracted'&&++focusTicks%5===0)setCoins(W.coins+1);
+ if(left===0){clearTimeout(seq);setCoins(W.coins+10);go('done');seq=setTimeout(start,4000);}else{$('clock').textContent=fmt(left);arc.setAttribute('stroke-dashoffset',(L*(1-left/total)).toFixed(1));}}},1000);
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){if(['focused','happy','ready'].includes(st)){clearTimeout(seq);hiddenAt=Date.now();st='distracted';}}
+ else if(hiddenAt){const away=Date.now()-hiddenAt;hiddenAt=0;if(away<3000)comeBack();else run(DOOM,()=>go('focused'));}});
+document.querySelectorAll('[data-start]').forEach(a=>a.addEventListener('click',()=>{total=+a.dataset.start*60;$('seg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.len===a.dataset.start));start();}));
+
+/* ---------- moods ---------- */
+const MOODS=[['ready','جاهز','Ready','الجلسة ما بدأت','Session not started'],['focused','مركّز','Focused','عينه على الشغل','Eyes on the work'],['away','بعيد','Away','ما يشوف وجهك','Face not detected'],['distracted','مشتّت','Distracted','سرحت كثير','Looking away too long'],['c3','عد تنازلي','Countdown','آخر فرصة: ٣·٢·١','Last chance: 3·2·1'],['kaboom','كابووم','Kaboom','خلص الوقت','Timer ran out'],['happy','أنجزت','Complete','خلصت الجلسة','Session finished']];
+let mi=0,mAuto=true;
+/* confetti in brand colors, for the "complete" face */
+function confetti(box){if(RM||!box||!box.animate)return;const cols=[C.volt,C.violet,C.cyan,C.gold,C.paper];
+ for(let k=0;k<46;k++){const c=document.createElement('span');c.className='cf';c.style.background=cols[k%cols.length];
+  if(k%3===0){c.style.width='8px';c.style.height='8px';c.style.borderRadius='50%';}
+  box.appendChild(c);const a=Math.random()*Math.PI*2,sp=120+Math.random()*190,dx=Math.cos(a)*sp,up=-(90+Math.random()*170),r=(Math.random()-.5)*900;
+  c.animate([{transform:'translate(-50%,-50%) rotate(0)',opacity:1},{transform:`translate(calc(-50% + ${dx*.7}px),calc(-50% + ${up}px)) rotate(${r*.5}deg)`,opacity:1,offset:.35},{transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${up+260+Math.random()*120}px)) rotate(${r}deg)`,opacity:0}],{duration:1500+Math.random()*900,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>c.remove();}}
+$('moodList').innerHTML=MOODS.map((m,i)=>`<button type="button" class="mood glass" data-i="${i}" aria-pressed="false"><span class="mf">${face(m[0],{tight:true,animate:false})}</span><span><span lang="ar">${m[1]}</span><span lang="en">${m[2]}</span></span></button>`).join('');
+function showMood(i){const prev=mi;mi=i;const m=MOODS[i];if(m[0]==='happy'&&prev!==i)confetti($('moodFace').parentElement);$('moodFace').innerHTML=face(m[0],look());$('moodName').textContent=T(m[1],m[2]);$('moodNote').textContent=T(m[3],m[4]);
+ $('moodList').querySelectorAll('.mood').forEach((b,j)=>b.setAttribute('aria-pressed',j===i));}
+$('moodList').addEventListener('click',e=>{const b=e.target.closest('.mood');if(!b)return;mAuto=false;showMood(+b.dataset.i);});
+if(!RM)setInterval(()=>{if(mAuto&&!document.hidden)showMood((mi+1)%MOODS.length);},2400);
+
+/* ---------- shop ---------- */
+function paintShop(){const sel=byId(W.sel),own=W.owned.includes(sel.id),eqd=W.eq[sel.cat]===sel.id,afford=W.coins>=sel.price;
+ $('tryFace').innerHTML=sel.fx?face('kaboom',{fx:true}):face('happy',Object.assign({shop:true},look(sel)));
+ $('tryCat').textContent=T(CAT[sel.cat][0],CAT[sel.cat][1]);$('tryRare').hidden=!sel.rare;$('tryPrice').textContent=sel.price;
+ const b=$('buy');b.textContent=eqd?T('لابسه','Equipped'):own?T('لبّسه','Equip'):afford?T('اشترِ · ','Buy · ')+sel.price:T('تحتاج '+(sel.price-W.coins)+' زيادة','Need '+(sel.price-W.coins)+' more');
+ b.disabled=eqd||(!own&&!afford);
+ $('items').innerHTML=SHOP.map(x=>{const o=W.owned.includes(x.id),e=W.eq[x.cat]===x.id;
+  return `<button type="button" class="item glass spot" data-id="${x.id}" aria-pressed="${x.id===W.sel}" aria-label="${T(x.ar,x.en)}"><span>${x.fx?face('kaboom',{shop:true,animate:false,fx:true}):face('ready',Object.assign({shop:true,animate:false},look(x)))}</span><span class="st" style="color:${e?C.cyan:o?C.haze:C.gold}">${e?T('لابسه','Equipped'):o?T('عندك','Owned'):'● '+x.price}</span></button>`;}).join('');}
+$('items').addEventListener('click',e=>{const b=e.target.closest('.item');if(!b)return;W.sel=b.dataset.id;paintShop();});
+$('buy').addEventListener('click',()=>{const sel=byId(W.sel);if(W.eq[sel.cat]===sel.id)return;
+ if(!W.owned.includes(sel.id)){if(W.coins<sel.price)return;W.owned.push(sel.id);setCoins(W.coins-sel.price);}
+ W.eq[sel.cat]=sel.id;paintShop();paintHero();paintDemo(true);showMood(mi);});
+
+/* ---------- language ---------- */
+const langBtn=$('lang');
+function setLang(l){page.dataset.lang=l;page.dir=l==='ar'?'rtl':'ltr';document.documentElement.lang=l;langBtn.textContent=l==='ar'?'English':'عربي';
+ try{localStorage.setItem('kaboom-lang',l)}catch(e){}render();showMood(mi);paintShop();paintWall();}
+langBtn.addEventListener('click',()=>setLang(AR()?'en':'ar'));
+let saved='ar';try{saved=localStorage.getItem('kaboom-lang')||'ar'}catch(e){}
+setLang(saved==='en'?'en':'ar');
+start();
+})();
+</script>
+
+</body>
+</html>
