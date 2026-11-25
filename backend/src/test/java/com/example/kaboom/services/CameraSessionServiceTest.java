@@ -583,6 +583,57 @@ class CameraSessionServiceTest {
         verify(focusSessionRepository, never()).save(any(FocusSession.class));
         verify(userRepository, never()).save(any(User.class));
     }
+
+    // KABOOM (EXPLOSION)
+
+    @Test
+    void recordState_secondTimeAway_triggersExplosion() {
+        mockSessionForUpdate();
+
+        when(session.getCurrentState()).thenReturn(FocusState.FOCUSED);
+        when(session.getLastEventAt()).thenReturn(LocalDateTime.now());
+        // The count after this report: the user left the desk for the second time.
+        when(session.getAwayCount()).thenReturn(2);
+        when(session.isExplosionTriggered()).thenReturn(false);
+
+        cameraSessionService.recordState(
+                userId, sessionId, stateRequest(FocusState.AWAY, 5L)
+        );
+
+        verify(session).setExplosionTriggered(true);
+    }
+
+    @Test
+    void recordState_fourthDistraction_triggersExplosion() {
+        mockSessionForUpdate();
+
+        when(session.getCurrentState()).thenReturn(FocusState.FOCUSED);
+        when(session.getLastEventAt()).thenReturn(LocalDateTime.now());
+        when(session.getDistractionCount()).thenReturn(4);
+        when(session.isExplosionTriggered()).thenReturn(false);
+
+        cameraSessionService.recordState(
+                userId, sessionId, stateRequest(FocusState.DISTRACTED, 5L)
+        );
+
+        verify(session).setExplosionTriggered(true);
+    }
+
+    @Test
+    void recordState_fewDistractions_doesNotExplode() {
+        mockSessionForUpdate();
+
+        when(session.getCurrentState()).thenReturn(FocusState.FOCUSED);
+        when(session.getLastEventAt()).thenReturn(LocalDateTime.now());
+        when(session.getDistractionCount()).thenReturn(1);
+        when(session.getAwayCount()).thenReturn(0);
+        when(session.isExplosionTriggered()).thenReturn(false);
+
+        CameraStateResponse response = cameraSessionService.recordState(
+                userId, sessionId, stateRequest(FocusState.DISTRACTED, 5L)
+        );
+
+        verify(session, never()).setExplosionTriggered(true);
+        assertFalse(response.explosionTriggered());
+    }
 }
-
-

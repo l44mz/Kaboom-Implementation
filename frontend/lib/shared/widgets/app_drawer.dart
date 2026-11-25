@@ -69,10 +69,11 @@ class AppDrawer extends StatelessWidget {
                     label: 'Store',
                     route: AppRoutes.shop,
                   ),
+                  // Robot or phone camera. Connecting the robot is inside this screen.
                   const _MenuItem(
-                    icon: Icons.bluetooth,
-                    label: 'Connect Robot',
-                    route: AppRoutes.robotPair,
+                    icon: Icons.center_focus_strong_outlined,
+                    label: 'Focus Mode',
+                    route: AppRoutes.focusMode,
                   ),
                   const _SectionLabel('ACCOUNT'),
                   const _MenuItem(

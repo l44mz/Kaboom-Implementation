@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:get/get.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/notifications/session_notifications.dart';
@@ -14,13 +16,19 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/controllers/user_controller.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/robot_face.dart';
+import '../../camera/services/phone_focus_detector.dart';
 import '../models/focus_session.dart';
 import '../models/focus_state.dart';
 import '../models/session_clock.dart';
 import '../models/session_result.dart';
+import '../services/camera_session_service.dart';
 import '../services/session_service.dart';
 
 /// The running session (Figma "Focused / Distracted / Away Status In Session").
+///
+/// Robot mode: Sparky watches and sends the states; this screen asks the backend for them.
+/// Camera mode: the phone's front camera watches (PhoneFocusDetector); this screen
+/// shows the states and sends them to the backend itself.
 class FocusSessionScreen extends StatefulWidget {
   const FocusSessionScreen({super.key, this.session, this.states, this.service});
 
@@ -38,9 +46,13 @@ class FocusSessionScreen extends StatefulWidget {
   State<FocusSessionScreen> createState() => _FocusSessionScreenState();
 }
 
-class _FocusSessionScreenState extends State<FocusSessionScreen> {
-  late final SessionService _service =
-      widget.service ?? SessionService(ApiClient(TokenStorage()));
+class _FocusSessionScreenState extends State<FocusSessionScreen>
+    with WidgetsBindingObserver {
+  // Camera sessions pause, resume and end through /camera-sessions.
+  late final SessionService _service = widget.service ??
+      (widget.session?.isCamera ?? false
+          ? CameraSessionService(ApiClient(TokenStorage()))
+          : SessionService(ApiClient(TokenStorage())));
 
   SessionClock? _clock;
   Timer? _ticker;
@@ -59,32 +71,162 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
   /// The phone notification with the timer (Android only, does nothing elsewhere).
   final _notifications = SessionNotifications.instance;
 
+  // ---- Camera mode only ----
+
+  /// Watches the user with the front camera. Null in robot mode.
+  PhoneFocusDetector? _detector;
+  StreamSubscription<FocusState>? _cameraSub;
+  Timer? _heartbeat;
+  bool _cameraStarting = false;
+
+  /// Why the camera isn't watching (no permission, no camera). Null while it works.
+  String? _cameraProblem;
+
+  /// Goes up by one for every state sent, so the backend ignores old or repeated ones.
+  int _sequence = 0;
+
+  /// True once the backend said Sparky exploded, so it's shown only once.
+  bool _exploded = false;
+
+  /// Sparky shows the KABOOM face until this time, then goes back to normal.
+  DateTime? _kaboomUntil;
+
+  bool get _showingKaboom {
+    final until = _kaboomUntil;
+    return until != null && DateTime.now().isBefore(until);
+  }
+
+  bool get _isCamera => widget.session?.isCamera ?? false;
+
   @override
   void initState() {
     super.initState();
     final session = widget.session;
     if (session == null) return;
 
+    // The clock starts now, on the phone, not at the server's startTime.
+    // The server sends its own local time with no time zone (for example
+    // "2026-11-24T17:00:00" from Render, which runs in UTC). On a phone in
+    // Riyadh (UTC+3) that looked 3 hours old, so the session ended at once.
+    // The screen opens right after the session starts, so now is the real start.
     _clock = SessionClock(
-      startTime: session.startTime,
+      startTime: DateTime.now(),
       plannedSeconds: session.plannedDurationSeconds,
     );
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
     unawaited(_startNotification());
-    _stateSub = (widget.states ?? _service.focusStates(session.id)).listen((state) {
-      if (!mounted) return;
-      setState(() {
-        _state = state;
-        _hasRobotState = true;
-      });
-    });
+
+    final given = widget.states;
+    if (given != null) {
+      _stateSub = given.listen(_onState); // tests
+    } else if (session.isCamera) {
+      // The phone watches. Keep the screen on, or the phone would lock and stop the camera.
+      WidgetsBinding.instance.addObserver(this);
+      unawaited(WakelockPlus.enable());
+      unawaited(_startCamera());
+      // A "still here" message every 10 seconds, like the robot, so the backend keeps
+      // counting the time in the current state even when nothing changes.
+      _heartbeat = Timer.periodic(
+        const Duration(seconds: 10),
+        (_) => _sendState(heartbeat: true),
+      );
+    } else {
+      _stateSub = _service.focusStates(session.id).listen(_onState); // Sparky
+    }
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
     _stateSub?.cancel();
+    _stopCamera();
     super.dispose();
+  }
+
+  void _onState(FocusState state) {
+    if (!mounted) return;
+    setState(() {
+      _state = state;
+      _hasRobotState = true;
+    });
+  }
+
+  // ---- Camera mode ----
+
+  Future<void> _startCamera() async {
+    if (_cameraStarting || _finishing) return;
+    _cameraStarting = true;
+    final detector = _detector ??= PhoneFocusDetector();
+    try {
+      await detector.start(); // asks for the camera permission the first time
+      _cameraSub ??= detector.states.listen((state) {
+        _onState(state);
+        _sendState(); // tell the backend at once when the state changes
+      });
+      if (mounted) setState(() => _cameraProblem = null);
+    } on CameraException catch (e) {
+      if (mounted) {
+        setState(() => _cameraProblem = e.code == 'CameraAccessDenied'
+            ? 'Kaboom needs the camera to watch your focus. Allow it in the phone settings.'
+            : 'The camera could not start (${e.code}).');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _cameraProblem = 'The camera could not start.');
+    } finally {
+      _cameraStarting = false;
+    }
+  }
+
+  void _stopCamera() {
+    final detector = _detector;
+    if (detector == null) return;
+    _detector = null;
+    _heartbeat?.cancel();
+    _cameraSub?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(WakelockPlus.disable());
+    unawaited(detector.dispose());
+  }
+
+  /// Android takes the camera away when the app goes to the background,
+  /// so stop it then, and start it again when the user comes back.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    final detector = _detector;
+    if (detector == null || _finishing) return;
+    if (lifecycle == AppLifecycleState.paused) {
+      unawaited(detector.stop());
+      setState(() {}); // hide the preview of the stopped camera
+    } else if (lifecycle == AppLifecycleState.resumed && detector.camera == null) {
+      unawaited(_startCamera());
+    }
+  }
+
+  /// Sends the current state to the backend (camera mode only).
+  Future<void> _sendState({bool heartbeat = false}) async {
+    final service = _service;
+    if (service is! CameraSessionService) return;
+    if (_finishing || !_hasRobotState || _clock!.isPaused) return;
+    try {
+      final exploded = await service.sendState(
+        widget.session!.id,
+        state: _state,
+        sequence: ++_sequence,
+        heartbeat: heartbeat,
+      );
+      if (exploded && !_exploded && mounted) {
+        _exploded = true;
+        _showExplosion();
+      }
+    } catch (e) {
+      debugPrint('Could not send the camera state: $e');
+    }
+  }
+
+  /// Sparky explodes on screen: the KABOOM face shakes for 5 seconds,
+  /// then the normal face comes back (the 1-second timer redraws the screen).
+  void _showExplosion() {
+    setState(() => _kaboomUntil = DateTime.now().add(const Duration(seconds: 5)));
   }
 
   /// The moment the session will end if it isn't paused again.
@@ -116,6 +258,8 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     // Update the screen right away, then tell the backend (which also tells the robot).
     setState(() => pausing ? _clock!.pause(now) : _clock!.resume(now));
     unawaited(_syncPause(pausing));
+    // Camera mode: after a resume, tell the backend the current state right away.
+    if (!pausing) unawaited(_sendState());
     // Paused: the notification stops counting. Resumed: it counts to the new end time.
     unawaited(pausing
         ? _notifications.showPaused(_clock!.remainingSeconds(now))
@@ -162,6 +306,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     _finishing = true;
     _ticker?.cancel();
     _stateSub?.cancel();
+    _stopCamera();
     unawaited(_notifications.sessionEnded(endedEarly: endedEarly));
 
     // The backend ends the session, stops the robot, and decides the coins.
@@ -233,11 +378,17 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
             flex: 3,
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: RobotFace(expression: _expressionFor(_state)),
+              child: _showingKaboom
+                  ? const _Shake(child: RobotFace(expression: RobotExpression.kaboom))
+                  : RobotFace(expression: _expressionFor(_state)),
             ),
           ),
+          if (_isCamera) ...[
+            const SizedBox(height: 12),
+            _CameraBadge(detector: _detector, problem: _cameraProblem),
+          ],
           const SizedBox(height: 16),
-          _StatusChip(state: _state),
+          _hasRobotState ? _StatusChip(state: _state) : const _WaitingChip(),
           const SizedBox(height: 20),
           Flexible(
             flex: 5,
@@ -248,9 +399,13 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
                 time: SessionClock.format(clock.remainingSeconds(now)),
                 message: clock.isPaused
                     ? 'Session paused'
-                    : _hasRobotState
+                    : _showingKaboom
+                        ? 'KABOOM! Too many distractions. Back to work!'
+                        : _hasRobotState
                         ? _state.message
-                        : 'Waiting for Sparky...',
+                        : _isCamera
+                            ? 'Looking for you...'
+                            : 'Waiting for Sparky...',
               ),
             ),
           ),
@@ -302,6 +457,93 @@ RobotExpression _expressionFor(FocusState state) => switch (state) {
       FocusState.distracted => RobotExpression.distracted,
       FocusState.away => RobotExpression.away,
     };
+
+/// Shakes its child left and right, strongly at first, then calmer (the explosion).
+class _Shake extends StatelessWidget {
+  const _Shake({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 1200),
+      builder: (context, t, child) => Transform.translate(
+        offset: Offset(math.sin(t * math.pi * 14) * 12 * (1 - t), 0),
+        child: child,
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Camera mode: a small round preview, so the user can check the phone sees them.
+/// Or the reason the camera isn't working.
+class _CameraBadge extends StatelessWidget {
+  const _CameraBadge({required this.detector, required this.problem});
+
+  final PhoneFocusDetector? detector;
+  final String? problem;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = problem;
+    if (text != null) {
+      return Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 12, color: AppColors.away),
+      );
+    }
+    final camera = detector?.camera;
+    if (camera == null || !camera.value.isInitialized) {
+      return const SizedBox(width: 64, height: 64);
+    }
+    return ClipOval(
+      child: SizedBox(
+        width: 64,
+        height: 64,
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: 100,
+            height: 100 * camera.value.aspectRatio,
+            child: CameraPreview(camera),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Before the first state arrives: not "Focused" yet, because nobody has looked.
+class _WaitingChip extends StatelessWidget {
+  const _WaitingChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 131),
+      height: 35,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border, width: 2),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.hourglass_empty, size: 18),
+          SizedBox(width: 6),
+          Text('Waiting', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
 
 /// The pill under the face: Focused, Distracted or Away.
 class _StatusChip extends StatelessWidget {

@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/controllers/focus_mode_controller.dart';
 import '../../../shared/controllers/outfit_controller.dart';
 import '../../../shared/controllers/user_controller.dart';
 import '../../../shared/widgets/app_drawer.dart';
@@ -18,6 +19,7 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/robot_face.dart';
+import '../../session/services/camera_session_service.dart';
 import '../../session/services/session_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -32,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _durations = [10, 15, 25, 45, 60];
 
   final _sessionService = SessionService(ApiClient(TokenStorage()));
+  final _cameraService = CameraSessionService(ApiClient(TokenStorage()));
 
   String? _error;
   bool _isLoading = true;
@@ -66,7 +69,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _startSession() async {
     setState(() => _isStarting = true);
     try {
-      final session = await _sessionService.startSession(
+      // Robot mode: Sparky watches. Phone mode: the phone's camera watches (camera session).
+      final service =
+          FocusModeController.to.usesPhone ? _cameraService : _sessionService;
+      final session = await service.startSession(
         plannedDurationSeconds: _minutes * 60,
       );
       if (!mounted) return;
@@ -126,6 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return DressedRobot(
                   expression: RobotExpression.ready,
                   glow: true,
+                  animated: true, // alive while waiting for a session
                   hat: outfit.hat,
                   screen: outfit.screen,
                   effect: outfit.effect,
@@ -174,9 +181,43 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _startSession,
             isLoading: _isStarting,
           ),
+          const SizedBox(height: 4),
+          const _ModeLine(),
         ],
       ),
     );
+  }
+}
+
+/// "With: Sparky robot · Change" under the Start button, so the user knows who will watch.
+class _ModeLine extends StatelessWidget {
+  const _ModeLine();
+
+  @override
+  Widget build(BuildContext context) {
+    final modes = FocusModeController.to;
+    return Obx(() {
+      final phone = modes.usesPhone;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            phone ? Icons.phone_android : Icons.smart_toy_outlined,
+            size: 16,
+            color: AppColors.textMuted,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            phone ? 'With: phone camera' : 'With: Sparky robot',
+            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+          ),
+          TextButton(
+            onPressed: () => context.push(AppRoutes.focusMode),
+            child: const Text('Change'),
+          ),
+        ],
+      );
+    });
   }
 }
 
