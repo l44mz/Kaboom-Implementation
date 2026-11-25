@@ -50,6 +50,20 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
+                        // The Flutter web app, served from the same server (see the Dockerfile).
+                        // A browser opening the site has no token yet, so these files are public.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/",
+                                "/index.html",
+                                "/*.js",
+                                "/*.json",
+                                "/*.png",
+                                "/assets/**",
+                                "/canvaskit/**",
+                                "/icons/**"
+                        ).permitAll()
+
                         .requestMatchers("/ws", "/ws/**").permitAll()
                         // Authentication endpoints are publicly accessible.
                         .requestMatchers("/api/v1/auth/**", "/error").permitAll()
