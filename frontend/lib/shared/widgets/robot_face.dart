@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Sparky's expressions, from the Figma "Robot faces" component.
-enum RobotExpression { focused, distracted, away, happy, ready }
+/// [kaboom] is the explosion: too many distractions in one session.
+enum RobotExpression { focused, distracted, away, happy, ready, kaboom }
 
 /// Sparky's face in its rounded card. Figma size is 272 x 188; [width] scales it.
 class RobotFace extends StatelessWidget {
@@ -73,7 +74,8 @@ class _FacePainter extends CustomPainter {
     canvas.drawRRect(
       screen.deflate(1.5),
       Paint()
-        ..color = AppColors.primary
+        // The border turns red when Sparky explodes.
+        ..color = expression == RobotExpression.kaboom ? AppColors.away : AppColors.primary
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );
@@ -120,6 +122,17 @@ class _FacePainter extends CustomPainter {
         canvas.drawCircle(const Offset(57, 68), 20, eyes);
         canvas.drawCircle(const Offset(171, 68), 20, eyes);
         _arc(canvas, const Offset(114, 92), 18, 0, _stroke(_mouth, 8));
+      case RobotExpression.kaboom:
+        // X X eyes and a big round "O" mouth, in red and orange.
+        final cross = _stroke(AppColors.away, 10);
+        for (final c in const [Offset(57, 64), Offset(171, 64)]) {
+          canvas.drawLine(c.translate(-18, -18), c.translate(18, 18), cross);
+          canvas.drawLine(c.translate(18, -18), c.translate(-18, 18), cross);
+        }
+        canvas.drawOval(
+          Rect.fromCenter(center: const Offset(114, 108), width: 34, height: 40),
+          _stroke(AppColors.distracted, 8),
+        );
     }
   }
 

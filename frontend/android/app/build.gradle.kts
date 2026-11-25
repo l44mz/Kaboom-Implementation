@@ -36,6 +36,11 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // No code shrinking (R8). R8 renames and removes Java classes it thinks are
+            // unused, and it broke ML Kit's image converter in camera mode
+            // (NullPointerException in InputImageConverter). The APK is a bit bigger.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

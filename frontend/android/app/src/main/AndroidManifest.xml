@@ -2,10 +2,20 @@
     <!-- Lets the "Session complete!" notification arrive at the exact second
          (on Android 14+ the user must allow it in settings, otherwise it can be a bit late). -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Lets the app use the internet to reach the backend. Flutter only adds this to
+         debug and profile builds, so without it the release APK cannot reach any server. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Camera mode: the front camera watches the user's focus. Android asks the user
+         the first time. required="false": the app still installs on phones without one. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
     <application
         android:label="kaboom_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        <!-- usesCleartextTraffic: allows plain http:// as well, for a backend on the
+             local network (http://<PC IP>:8080). Render uses https:// and does not need it. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
