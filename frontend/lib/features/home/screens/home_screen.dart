@@ -132,6 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return DressedRobot(
                   expression: RobotExpression.ready,
                   glow: true,
+                  animated: true, // alive while waiting for a session
                   hat: outfit.hat,
                   screen: outfit.screen,
                   effect: outfit.effect,

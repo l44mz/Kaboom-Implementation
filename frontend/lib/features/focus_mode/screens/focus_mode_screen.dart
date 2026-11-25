@@ -70,6 +70,13 @@ class FocusModeScreen extends StatelessWidget {
                   enabled: FocusModeController.phoneSupported,
                   disabledNote: 'Only in the Android and iOS app.',
                   onTap: () => modes.choose(FocusMode.phone),
+                  action: FocusModeController.phoneSupported
+                      ? TextButton.icon(
+                          onPressed: () => context.push(AppRoutes.cameraTest),
+                          icon: const Icon(Icons.videocam_outlined, size: 18),
+                          label: const Text('Test the camera'),
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 24),
                 const Text(

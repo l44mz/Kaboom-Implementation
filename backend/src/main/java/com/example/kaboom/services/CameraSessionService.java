@@ -137,7 +137,7 @@ public class CameraSessionService {
                     "Session is not active",
                     session.getCurrentState(),
                     session.getLastSequenceNumber(),
-                    false);
+                    session.isExplosionTriggered());
         }
 
         if (request.sequenceNumber() <= session.getLastSequenceNumber()) {
@@ -145,7 +145,7 @@ public class CameraSessionService {
                     "Ignored stale report",
                     session.getCurrentState(),
                     session.getLastSequenceNumber(),
-                    false);
+                    session.isExplosionTriggered());
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -173,6 +173,14 @@ public class CameraSessionService {
             }
         }
 
+        // Kaboom: the same rule as robot sessions (FocusSessionService).
+        // Away twice or distracted four times makes Sparky explode, once per session.
+        if (!session.isExplosionTriggered()
+                && (session.getAwayCount() >= 2
+                || session.getDistractionCount() >= 4)) {
+            session.setExplosionTriggered(true);
+        }
+
         session.setCurrentState(newState);
         session.setLastEventAt(now);
         session.setLastSequenceNumber(request.sequenceNumber());
@@ -183,7 +191,7 @@ public class CameraSessionService {
                 "Camera state recorded",
                 newState,
                 session.getLastSequenceNumber(),
-                false);
+                session.isExplosionTriggered());
     }
 
     @Transactional

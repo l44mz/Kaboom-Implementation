@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../controllers/outfit_controller.dart';
+import 'animated_robot_face.dart';
 import 'robot_face.dart';
 
 /// Sparky's face wearing what the user equipped in the Store:
@@ -18,7 +19,12 @@ class DressedRobot extends StatelessWidget {
     this.hat,
     this.screen,
     this.effect,
+    this.animated = false,
   });
+
+  /// True: the living face (looks around and blinks), like on Log In.
+  /// [expression] is then ignored, because the living face is always "ready".
+  final bool animated;
 
   final RobotExpression expression;
   final double width;
@@ -47,7 +53,10 @@ class DressedRobot extends StatelessWidget {
           Positioned(
             top: top,
             left: 0,
-            child: RobotFace(expression: expression, width: width, glow: glow),
+            child: animated
+                // It floats only when nothing sits on its head.
+                ? AnimatedRobotFace(width: width, float: hat == null)
+                : RobotFace(expression: expression, width: width, glow: glow),
           ),
           if (hat != null)
             Positioned(

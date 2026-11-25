@@ -10,13 +10,22 @@ import '../../core/theme/app_colors.dart';
 /// Same look as [RobotFace] with the "ready" expression (o o eyes and a smile),
 /// so it matches Home. Used at the top of Sign Up and Log In.
 class AnimatedRobotFace extends StatefulWidget {
-  const AnimatedRobotFace({super.key, this.width = 185, this.animate = true});
+  const AnimatedRobotFace({
+    super.key,
+    this.width = 185,
+    this.animate = true,
+    this.float = true,
+  });
 
   /// The card is 272 x 188 in Figma; this scales it.
   final double width;
 
   /// False shows the still face (for tests or screenshots).
   final bool animate;
+
+  /// False keeps the card still (the eyes still move and blink). Used under a hat,
+  /// so the hat doesn't look like it floats off the head.
+  final bool float;
 
   @override
   State<AnimatedRobotFace> createState() => _AnimatedRobotFaceState();
@@ -59,7 +68,7 @@ class _AnimatedRobotFaceState extends State<AnimatedRobotFace>
         final pose = _FacePose.at(t);
 
         return Transform.translate(
-          offset: Offset(0, pose.floatY * widget.width / 272),
+          offset: Offset(0, widget.float ? pose.floatY * widget.width / 272 : 0),
           child: SizedBox(
             width: widget.width,
             height: height,
