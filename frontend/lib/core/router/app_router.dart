@@ -16,8 +16,10 @@ import '../../features/session/models/session_result.dart';
 import '../../features/session/screens/focus_session_screen.dart';
 import '../../features/session/screens/session_complete_screen.dart';
 import '../../features/shop/screens/shop_screen.dart';
+import '../../features/splash/screens/splash_screen.dart';
 
 class AppRoutes {
+  static const splash = '/splash';
   static const login = '/login';
   static const signUp = '/signup';
   static const home = '/home';
@@ -34,8 +36,10 @@ class AppRoutes {
 }
 
 final appRouter = GoRouter(
-  initialLocation: AppRoutes.signUp,
+  // The app opens on the splash screen; it moves on to Sign Up by itself.
+  initialLocation: AppRoutes.splash,
   routes: [
+    GoRoute(path: AppRoutes.splash, builder: (context, state) => const SplashScreen()),
     GoRoute(path: AppRoutes.login, builder: (context, state) => const LoginScreen()),
     GoRoute(path: AppRoutes.signUp, builder: (context, state) => const SignUpScreen()),
     GoRoute(path: AppRoutes.home, builder: (context, state) => const HomeScreen()),
