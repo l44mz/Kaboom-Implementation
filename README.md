@@ -4,7 +4,9 @@
 
 Holberton School portfolio project by Shahd, Gheed, Lama and Noura.
 
-<!-- Add here once available: production URL, demo video, screenshots. -->
+**Live:** https://kaboom-implementation-production.up.railway.app (the web app and the API, deployed on Railway).
+
+<!-- Add here once available: demo video, screenshots. -->
 
 ## How it works
 
@@ -51,7 +53,7 @@ backend/    Spring Boot API
 frontend/   Flutter app
 robot/      Python program for the Raspberry Pi (computer vision and robot face)
 docs/       sprint reviews and retrospectives, QA test plan and reports
-Dockerfile  builds the backend for deployment
+Dockerfile  builds one image with the backend and the web app (Railway)
 docker-compose.yml  local MySQL
 ```
 
@@ -98,6 +100,19 @@ python -m kaboom_robot.vision.download_model
 cp config.example.yaml config.yaml   # set api.base_url and api.robot_id
 python -m kaboom_robot.main
 ```
+
+## Deployment
+
+Kaboom runs on [Railway](https://kaboom-implementation-production.up.railway.app), in one project with two services:
+
+- **Kaboom-Implementation**: built from the `Dockerfile` on `master`. One server for the web app (`/`), the API (`/api/v1`) and live updates (`/ws`).
+- **MySQL**: the database, with its own volume. The backend finds it through `DB_URL`, `DB_USERNAME` and `DB_PASSWORD`, which point to Railway's MySQL variables.
+
+Other variables: `JWT_SECRET`, `KABOOM_ADMIN_EMAIL`, `KABOOM_ADMIN_PASSWORD` and `SERVER_FORWARD_HEADERS_STRATEGY=framework` (the last one is also in `application.properties`).
+
+To release: merge `develop` into `master` with a pull request, then in Railway open the service, **Settings**, **Check for updates**, **Update**, **Yes**. Railway does not deploy by itself, because its GitHub app has no access to this repository.
+
+The Android app talks to the same server: build it with `--dart-define=API_BASE_URL=https://kaboom-implementation-production.up.railway.app/api/v1`.
 
 ## Tests
 
