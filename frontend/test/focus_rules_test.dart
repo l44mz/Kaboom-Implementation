@@ -38,9 +38,9 @@ void main() {
     expect(r.state, FocusState.focused);
   });
 
-  test('head turned for 5 seconds is distracted', () {
+  test('head turned for 3 seconds is distracted', () {
     final r = timersOnly();
-    final t = run(r, headTurned, 0, 4.5);
+    final t = run(r, headTurned, 0, 2.5);
     expect(r.state, FocusState.focused);
     run(r, headTurned, t, 1);
     expect(r.state, FocusState.distracted);
@@ -109,10 +109,10 @@ void main() {
 
   test('one lost frame does not restart the distraction clock', () {
     final r = timersOnly();
-    var t = run(r, headTurned, 0, 3);
+    var t = run(r, headTurned, 0, 1.8);
     t += 0.1;
     r.update(t, lookingAtWork);
-    run(r, headTurned, t, 2.1);
+    run(r, headTurned, t, 1.3);
     expect(r.state, FocusState.distracted);
   });
 
