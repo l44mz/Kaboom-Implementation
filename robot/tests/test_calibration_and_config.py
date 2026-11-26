@@ -32,7 +32,7 @@ def test_baseline_waits_for_a_face():
 def test_config_reads_the_example_file():
     cfg = load_config(Path("config.example.yaml"))
     assert cfg.camera.source == "opencv"
-    assert cfg.vision.thresholds.distracted_after_s == 5
+    assert cfg.vision.thresholds.distracted_after_s == 3
     assert cfg.vision.model_path == Path("models/face_landmarker.task")
 
 

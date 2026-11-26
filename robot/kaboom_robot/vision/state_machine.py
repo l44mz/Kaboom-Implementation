@@ -35,7 +35,7 @@ class Thresholds:
     pitch_deg: float = 20.0  # head up/down (for example, looking at a phone)
     roll_deg: float = 30.0  # head tilted to a shoulder
     eyes_closed_after_s: float = 3.0
-    distracted_after_s: float = 5.0
+    distracted_after_s: float = 3.0
     away_after_s: float = 3.0
     recover_after_s: float = 1.0  # how long all must look fine before FOCUSED again
     grace_s: float = 0.5  # gaps shorter than this do not break a streak

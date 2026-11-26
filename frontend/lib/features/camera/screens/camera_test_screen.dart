@@ -153,7 +153,7 @@ class _ReadingView extends StatelessWidget {
         _Row('Eyes vs. your normal', _pct(obs.eyeOpenRatio), limit: '40%'),
         const SizedBox(height: 12),
         const Text(
-          'Distracted after 5 s with the head turned or 3 s with the eyes closed. '
+          'Distracted after 3 s with the head turned or the eyes closed. '
           'Away after 3 s with no face. The angles are measured from your working pose.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, color: AppColors.textMuted),

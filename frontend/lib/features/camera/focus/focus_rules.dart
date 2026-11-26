@@ -8,7 +8,7 @@ import 'face_observation.dart';
 /// This is a Dart copy of Sparky's rules (robot/kaboom_robot/vision/state_machine.py
 /// and calibration.py), so both modes judge the user the same way:
 /// - no face for 3 seconds: AWAY
-/// - head turned (or looking down) for 5 seconds: DISTRACTED
+/// - head turned (or looking down) for 3 seconds: DISTRACTED
 /// - eyes closed for 3 seconds: DISTRACTED
 /// - everything fine for 1 second: back to FOCUSED
 /// A single frame is never trusted: a blink or a quick glance changes nothing.
@@ -25,7 +25,7 @@ class FocusThresholds {
     this.rollDeg = 30,
     this.smoothingS = 0.15,
     this.eyesClosedAfterS = 3,
-    this.distractedAfterS = 5,
+    this.distractedAfterS = 3,
     this.awayAfterS = 3,
     this.recoverAfterS = 1,
     this.graceS = 0.5,
