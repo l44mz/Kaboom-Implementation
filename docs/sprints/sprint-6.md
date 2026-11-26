@@ -16,7 +16,7 @@
 
 Still in progress (2 cards):
 - The detection accuracy evaluation with 5 users (test plan, section 7).
-- Bug fixing and the production deploy. The bugs are fixed and logged in [docs/qa/bugs.md](../qa/bugs.md). The backend is deployed on Render; the web app is not deployed yet.
+- Bug fixing and the production deploy. The bugs are fixed and logged in [docs/qa/bugs.md](../qa/bugs.md). The deploy was finished after the sprint, on Nov 25: the backend, the web app and the MySQL database run on Railway (https://kaboom-implementation-production.up.railway.app).
 
 Delivered during the sprint:
 - Camera mode: a focus session can run with a laptop webcam instead of the robot (Noura, Nov 16).
@@ -52,7 +52,7 @@ Finished right after the sprint (Nov 22 to 24):
 **What did not go well**
 - The integration PRs (#17 to #19) were merged on Nov 21, after the sprint ended, so `develop` was not testable during most of the sprint.
 - A pull request was merged into `master` by mistake (#21), and its revert (#22) removed the app from `develop` for a few hours.
-- The production deploy and the accuracy evaluation with users were left to the end, and they are not finished.
+- The production deploy and the accuracy evaluation with users were left to the end. The deploy was only finished on Nov 25, after the sprint, and the evaluation is not finished.
 - The Trello Bugs list was not used; bugs were only logged after the sprint.
 
 **What we change next time**
