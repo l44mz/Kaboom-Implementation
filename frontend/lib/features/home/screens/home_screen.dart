@@ -7,7 +7,6 @@ import '../../../core/network/api_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../shared/controllers/focus_mode_controller.dart';
 import '../../../shared/controllers/outfit_controller.dart';
 import '../../../shared/controllers/user_controller.dart';
@@ -21,6 +20,7 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/robot_face.dart';
 import '../../session/services/camera_session_service.dart';
 import '../../session/services/session_service.dart';
+import '../widgets/duration_dial.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,7 +31,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 
-  static const _durations = [10, 15, 25, 45, 60];
 
   final _sessionService = SessionService(ApiClient(TokenStorage()));
   final _cameraService = CameraSessionService(ApiClient(TokenStorage()));
@@ -154,26 +153,13 @@ class _HomeScreenState extends State<HomeScreen> {
             flex: 4,
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: _DurationRing(minutes: _minutes),
+              // Drag the knob around the clock to pick the minutes (5 to 60).
+              child: DurationDial(
+                minutes: _minutes,
+                enabled: !_isStarting,
+                onChanged: (m) => setState(() => _minutes = m),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final m in _durations)
-                ChoiceChip(
-                  label: Text('$m min'),
-                  selected: m == _minutes,
-                  showCheckmark: false,
-                  selectedColor: AppColors.secondary,
-                  onSelected: _isStarting
-                      ? null
-                      : (_) => setState(() => _minutes = m),
-                ),
-            ],
           ),
           const SizedBox(height: 24),
           PrimaryButton(
@@ -218,65 +204,5 @@ class _ModeLine extends StatelessWidget {
         ],
       );
     });
-  }
-}
-
-/// The ring with the chosen time in the middle.
-class _DurationRing extends StatelessWidget {
-  const _DurationRing({required this.minutes});
-
-  final int minutes;
-  static const _maxMinutes = 60;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 260,
-      height: 260,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox.expand(
-            child: CircularProgressIndicator(
-              value: minutes / _maxMinutes,
-              strokeWidth: 18,
-              strokeCap: StrokeCap.round,
-              backgroundColor: const Color(0xFF1F1F2A),
-              color: AppColors.secondary,
-            ),
-          ),
-          // Keep the text inside the ring: 40 from each edge clears the 18 px band,
-          // and FittedBox shrinks the text if it would still be too wide.
-          Padding(
-            padding: const EdgeInsets.all(40),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$minutes:00',
-                    style: AppTheme.timerStyle.copyWith(
-                      fontSize: 56,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Sparky is waiting\nfor you',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
