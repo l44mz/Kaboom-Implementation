@@ -30,9 +30,9 @@ def test_starts_focused_and_stays_focused():
     assert state == FocusState.FOCUSED
 
 
-def test_head_turned_for_5_seconds_is_distracted():
+def test_head_turned_for_3_seconds_is_distracted():
     m = FocusStateMachine()
-    state, t = run(m, HEAD_TURNED, 0, 4.5)
+    state, t = run(m, HEAD_TURNED, 0, 2.5)
     assert state == FocusState.FOCUSED
     state, _ = run(m, HEAD_TURNED, t, 1.0)
     assert state == FocusState.DISTRACTED
@@ -101,10 +101,10 @@ def test_coming_back_returns_to_focused_within_two_seconds():
 
 def test_one_lost_frame_does_not_restart_the_distraction_clock():
     m = FocusStateMachine()
-    _, t = run(m, HEAD_TURNED, 0, 3)
+    _, t = run(m, HEAD_TURNED, 0, 1.8)
     t += 0.1
     m.update(t, FaceObservation(True, ear=0.30, gaze=0.0, yaw=0.0, pitch=0.0, roll=0.0))
-    state, _ = run(m, HEAD_TURNED, t, 2.1)
+    state, _ = run(m, HEAD_TURNED, t, 1.3)
     assert state == FocusState.DISTRACTED
 
 
